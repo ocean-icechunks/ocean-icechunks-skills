@@ -16,8 +16,17 @@ on anything under "Open threads".
 - **License: CC0-1.0** (Eli, 2026-11-13: "not really code"). The skill was
   Apache-2.0 in agent-skills; every commit to it was by Eli or her agents, so
   nobody else's work was relicensed.
-- Planned second skill: `archive-to-cloud`, #4 (copied from
-  nmfs-opensci/agent-skills#40; GitHub cannot transfer issues between orgs).
+- **Next task (Eli, 2026-11-13): the second skill, `archive-to-cloud`**, #4: auditing
+  a provider's NetCDF archive, copying it unchanged to object storage, and verifying
+  the copies. Copied from nmfs-opensci/agent-skills#40 (GitHub cannot transfer issues
+  between orgs); its outline, lessons and open questions are in the issue body. Not
+  started: no branch, no skill directory.
+- Evidence for #4: #4 still says the scripts are "on the `pacioos-upload` branch", but
+  that branch was merged (ocean-icechunks/icechunks#39) and deleted on 2026-11-13. The
+  scripts and their README now live in ocean-icechunks/pacioos under `upload/`
+  (`~/pacioos/upload/`: `upload_over_ssh.sh`, `upload_to_source_coop.sh`,
+  `verify_source_coop_copy.py`, `README.md`). See also pacioos#1 and #2, and
+  `~/pacioos/agent/handoff.md`.
 - Hub install: `~/.agents/skills/virtual-icechunk` (and `~/.claude/skills/`
   through it) points at this checkout's `skills/virtual-icechunk` since
   2026-11-13, so it follows whatever branch is checked out here.
@@ -48,11 +57,11 @@ harvested into the skill on purpose. History of decisions:
 
 ## Open threads
 
-- **The move (ocean-icechunks/icechunks#46)**: done and merged 2026-11-13 (#1 here with
-  a merge commit to keep history, #2, nmfs-opensci/agent-skills#41, icechunks#48,
-  cefi-icechunks#9). The how-to README is its own PR. Still open in #46: pointers in
-  pacioos, hycom and pace-icechunks, and the PacIOOS team note (a claude.ai artifact).
-  gobai-rfrom-icechunks needed nothing. The hackweek is on 2026-11-17.
+- **The move is finished** (ocean-icechunks/icechunks#46, closed 2026-11-13): here
+  #1 (a merge commit, to keep history), #2 and #6 (README). Elsewhere:
+  nmfs-opensci/agent-skills#41, icechunks#48, cefi-icechunks#9, pacioos#8, hycom#14,
+  and the PacIOOS team note. One follow-up: test `gh skill install` once `gh` in the
+  py-rocket image is 2.90 or later, then fill in the README's "Coming" note.
 - **Append alignment, #3 (was nmfs-opensci/agent-skills#21)**: decisions made, failure verified,
   no skill edits yet. [append-alignment-issue-21.md](../docs/design/append-alignment-issue-21.md).
   Eli has an upstream VirtualiZarr issue drafted but not posted.
