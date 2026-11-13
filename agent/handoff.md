@@ -69,8 +69,30 @@ ocean-icechunks/icechunks (AGENTS.md, notes).
 - Found on the way: ocean-icechunks/pacioos#9 (the upload script hides a failed listing
   and could overwrite copies). PacIOOS's copy, their fix.
 
+## Other playbooks: positioning (Eli, 2026-11-13)
+
+From the ESIP dynamical.org links (Earthmover skill, dynamical.org guides, Development
+Seed `virtualizarr-data-pipelines`, dynamical bit rounding). Shipped in #11.
+
+- **Our skills are stage 1**: a knowledge layer for ocean sources, for experimental and
+  research-level virtual stores, for someone starting from NetCDF/HDF5 files on a server
+  or object storage (or moving them there). **Development Seed's template is stage 2**,
+  production pipelines; what stage 1 works out becomes its processor. Earthmover is a
+  skill too but is built around file formats, tailored to Arraylake, and assumes files are
+  already in an Arraylake bucket (no HTTPS/THREDDS; checked in its SKILL.md step 2).
+  dynamical.org is lessons, not reusable code. None of them is a base to rebuild ours on.
+- **The comparison lives in two places, keep them in step**: the public artifact "Four
+  Icechunk playbooks" (https://claude.ai/artifact/Q9ZqcXiqYZVBc2tXygyHVd, linked from the
+  README) and `docs/other-icechunk-playbooks.md`. The artifact's source HTML was in a session
+  scratchpad and is gone; to edit it, read it by URL first and republish to the same URL.
+
 ## Open threads
 
+- **Lessons from the other playbooks, #10**: candidate additions (manifest-split cost
+  model, "what validated means", append vs region writes, parallel builds, license check,
+  Kerchunk is in *maintenance mode* not "deprecated", NetCDF3 sub-chunk refs for #3).
+  Nothing tested. Bit rounding was ruled out (materialized only). Whether keeping stores
+  current is in scope is Eli's open question; it decides how much of #10 matters.
 - **The move is finished** (ocean-icechunks/icechunks#46, closed 2026-11-13): here
   #1 (a merge commit, to keep history), #2 and #6 (README). Elsewhere:
   nmfs-opensci/agent-skills#41, icechunks#48, cefi-icechunks#9, pacioos#8, hycom#14,
