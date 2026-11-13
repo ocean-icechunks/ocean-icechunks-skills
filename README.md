@@ -246,8 +246,10 @@ here under CC0.)
 These skills come from lessons learned building a variety of VirtualiZarr +
 Icechunk stores of ocean data. Others have written guides and tools for related
 work, including materialized stores and pipelines at larger scale.
-[Four Icechunk playbooks](docs/other-icechunk-playbooks.md) summarizes how they
-differ from these skills and what they share. Bringing their lessons into these
+[Four Icechunk playbooks](https://claude.ai/artifact/Q9ZqcXiqYZVBc2tXygyHVd)
+summarizes how they differ from these skills, what they share, and how they fit
+together (the same content is in
+[docs/other-icechunk-playbooks.md](docs/other-icechunk-playbooks.md)). Bringing their lessons into these
 skills is an open issue,
 [#10](https://github.com/ocean-icechunks/ocean-icechunks-skills/issues/10).
 
