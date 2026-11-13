@@ -9,27 +9,20 @@ on anything under "Open threads".
 - Repo: `ocean-icechunks/ocean-icechunks-skills`, at
   `/home/jovyan/ocean-icechunks-skills`. Issue ocean-icechunks/icechunks#46 calls
   it `ocean-icechunks/skills`; Eli chose to keep the current name (2026-11-13).
-- One skill, `virtual-icechunk` (Experimental). Moved here from
-  `nmfs-opensci/agent-skills` on 2026-11-13, history kept with `git-filter-repo`.
-  Old commit messages name `nmfs-opensci/agent-skills#N` for that repo's issues;
-  the design notes were rewritten the same way.
-- **License: CC0-1.0** (Eli, 2026-11-13: "not really code"). The skill was
+- Two skills, both Experimental:
+  - `virtual-icechunk`. Moved here from `nmfs-opensci/agent-skills` on 2026-11-13,
+    history kept with `git-filter-repo`. Old commit messages name
+    `nmfs-opensci/agent-skills#N` for that repo's issues; the design notes were
+    rewritten the same way.
+  - `archive-to-cloud` (#8, merged 2026-11-13; #4 closed): audit a provider's archive,
+    copy it unchanged to object storage, verify the copies. See "archive-to-cloud" below.
+- **License: CC0-1.0** (Eli, 2026-11-13: "not really code"). `virtual-icechunk` was
   Apache-2.0 in agent-skills; every commit to it was by Eli or her agents, so
   nobody else's work was relicensed.
-- **Next task (Eli, 2026-11-13): the second skill, `archive-to-cloud`**, #4: auditing
-  a provider's NetCDF archive, copying it unchanged to object storage, and verifying
-  the copies. Copied from nmfs-opensci/agent-skills#40 (GitHub cannot transfer issues
-  between orgs); its outline, lessons and open questions are in the issue body. Not
-  started: no branch, no skill directory.
-- Evidence for #4: #4 still says the scripts are "on the `pacioos-upload` branch", but
-  that branch was merged (ocean-icechunks/icechunks#39) and deleted on 2026-11-13. The
-  scripts and their README now live in ocean-icechunks/pacioos under `upload/`
-  (`~/pacioos/upload/`: `upload_over_ssh.sh`, `upload_to_source_coop.sh`,
-  `verify_source_coop_copy.py`, `README.md`). See also pacioos#1 and #2, and
-  `~/pacioos/agent/handoff.md`.
-- Hub install: `~/.agents/skills/virtual-icechunk` (and `~/.claude/skills/`
-  through it) points at this checkout's `skills/virtual-icechunk` since
-  2026-11-13, so it follows whatever branch is checked out here.
+- Hub install: `~/.agents/skills/<skill>` points at this checkout's `skills/<skill>`,
+  and `~/.claude/skills/<skill>` points through it (`~/.gemini/config/skills` *is*
+  `~/.agents/skills`). Both skills since 2026-11-13. They follow whatever branch is
+  checked out here.
 
 ## Working principles
 
@@ -38,7 +31,10 @@ on anything under "Open threads".
   directory, evals kept under `evals/`, uncertain guidance marked Experimental
   or Provisional.
 - Run `ruby .github/scripts/validate_skills.rb` before every commit. It also
-  scans the tree for secrets.
+  scans the tree for secrets, including untracked files, and binary ones as
+  bytes (fixed in #8; it used to crash on a `.pyc`).
+- Script tests live in `evals/<skill>/` (e.g. `test_verify_copy.py`), outside
+  the bundle, and must not write `__pycache__` into a skill directory.
 - Every change goes through an issue, a branch and a PR, with the real reasoning
   in the PR body.
 - Never modify production Icechunk stores, datasets or object storage while
@@ -47,13 +43,31 @@ on anything under "Open threads".
   was built from. Read it before changing technical claims. For CoastWatch,
   `ocean-icechunks/icechunks` and its notes are fresher.
 
-## What the skill has been through
+## What virtual-icechunk has been through
 
 Used on real builds (OA indicators, HYCOM, CEFI audit, PacIOOS probe); the
 evals have only been dry-run on paper. Build lessons are written first in the
 store repos (`ocean-icechunks/icechunks`, `hycom`, `cefi-icechunks`, …) and
 harvested into the skill on purpose. History of decisions:
 [virtual-icechunk-skill.md](../docs/design/virtual-icechunk-skill.md).
+
+## archive-to-cloud: decisions (Eli, 2026-11-13)
+
+Reasoning in full in the #8 PR body. Evidence came from ocean-icechunks/pacioos
+(`upload/`, `docs/design/`, #2), noaa-nwfsc/cefi-icechunks (`audit/`, notes), and
+ocean-icechunks/icechunks (AGENTS.md, notes).
+
+- **Only the verify script is bundled.** No upload scripts: `copy-script.md` is a
+  contract for writing one per job, with PacIOOS `upload/` as the worked example.
+  Don't "complete" the skill by importing the PacIOOS scripts.
+- **The audit is split by job.** Inventory and integrity checks are here; whether files
+  can be virtualized stays in `virtual-icechunk`. Don't duplicate chunking guidance.
+- **`change-detection.md` is Provisional** until ocean-icechunks/pacioos#2 settles;
+  harvest the answers from there.
+- `verify_copy.py` was tested on Python 3.12 only. Listing and sampled MD5s were run on
+  the PacIOOS copies, and listing on the CEFI NODD bucket. The evals are written, not run.
+- Found on the way: ocean-icechunks/pacioos#9 (the upload script hides a failed listing
+  and could overwrite copies). PacIOOS's copy, their fix.
 
 ## Open threads
 
