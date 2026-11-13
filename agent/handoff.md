@@ -16,8 +16,11 @@ on anything under "Open threads".
 - **License: CC0-1.0** (Eli, 2026-11-13: "not really code"). The skill was
   Apache-2.0 in agent-skills; every commit to it was by Eli or her agents, so
   nobody else's work was relicensed.
-- Planned second skill: `archive-to-cloud` (issue transferred from
-  agent-skills#40).
+- Planned second skill: `archive-to-cloud`, #4 (copied from
+  nmfs-opensci/agent-skills#40; GitHub cannot transfer issues between orgs).
+- Hub install: `~/.agents/skills/virtual-icechunk` (and `~/.claude/skills/`
+  through it) points at this checkout's `skills/virtual-icechunk` since
+  2026-11-13, so it follows whatever branch is checked out here.
 
 ## Working principles
 
@@ -45,12 +48,14 @@ harvested into the skill on purpose. History of decisions:
 
 ## Open threads
 
-- **The move (ocean-icechunks/icechunks#46)**: still to do are the how-to README
-  for this repo, and updating every pointer to the old location (store repos,
-  PacIOOS team note, hub skill symlinks). The hackweek is on 2026-11-17.
-- **THREDDS/ERDDAP file-exposure checks**: was agent-skills PR #39, never
-  reviewed; recreated here as a PR so Eli can review it in the new home.
-- **Append alignment (was agent-skills#21)**: decisions made, failure verified,
+- **The move (ocean-icechunks/icechunks#46)**: PR #1 here, nmfs-opensci/agent-skills#41
+  there (merge after #1). Still to do are the how-to README
+  for this repo, and updating every pointer to the old location (store repos and
+  the PacIOOS team note). The hackweek is on 2026-11-17.
+- **THREDDS/ERDDAP file-exposure checks**: #2, stacked on the move PR #1. Was
+  nmfs-opensci/agent-skills#39 (closed, never reviewed); reopened here so Eli
+  can review it in the new home.
+- **Append alignment, #3 (was nmfs-opensci/agent-skills#21)**: decisions made, failure verified,
   no skill edits yet. [append-alignment-issue-21.md](../docs/design/append-alignment-issue-21.md).
   Eli has an upstream VirtualiZarr issue drafted but not posted.
 - **Lessons from the HYCOM build await a Learn pass**, including two places the
