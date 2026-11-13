@@ -48,13 +48,11 @@ harvested into the skill on purpose. History of decisions:
 
 ## Open threads
 
-- **The move (ocean-icechunks/icechunks#46)**: PR #1 here, nmfs-opensci/agent-skills#41
-  there (merge after #1). Still to do are the how-to README
-  for this repo, and updating every pointer to the old location (store repos and
-  the PacIOOS team note). The hackweek is on 2026-11-17.
-- **THREDDS/ERDDAP file-exposure checks**: #2, stacked on the move PR #1. Was
-  nmfs-opensci/agent-skills#39 (closed, never reviewed); reopened here so Eli
-  can review it in the new home.
+- **The move (ocean-icechunks/icechunks#46)**: done and merged 2026-11-13 (#1 here with
+  a merge commit to keep history, #2, nmfs-opensci/agent-skills#41, icechunks#48,
+  cefi-icechunks#9). The how-to README is its own PR. Still open in #46: pointers in
+  pacioos, hycom and pace-icechunks, and the PacIOOS team note (a claude.ai artifact).
+  gobai-rfrom-icechunks needed nothing. The hackweek is on 2026-11-17.
 - **Append alignment, #3 (was nmfs-opensci/agent-skills#21)**: decisions made, failure verified,
   no skill edits yet. [append-alignment-issue-21.md](../docs/design/append-alignment-issue-21.md).
   Eli has an upstream VirtualiZarr issue drafted but not posted.
@@ -64,3 +62,17 @@ harvested into the skill on purpose. History of decisions:
   (2026-09-18). [expanding-format-coverage.md](../docs/design/expanding-format-coverage.md).
 - **Running the evals**: earth-mover's harness would largely port.
   [earth-mover-comparison.md](../docs/design/earth-mover-comparison.md).
+
+## README install instructions: what was verified (2026-11-13)
+
+- Both README recipes (personal links, per-project `rsync`) were run under a throwaway
+  `HOME`: on a fresh machine, and on an old agent-skills-style install where
+  `~/.gemini/config/skills` is itself a symlink to `~/.agents/skills`.
+- On this hub, with the symlinked install, the skill is listed by Claude Code, by
+  `copilot skill list`, and by `agy -p` (Antigravity CLI). Codex is not installed here,
+  so its rows come from its docs only.
+- Skill paths and commands were checked against each vendor's docs on 2026-11-13.
+  Symlinks are documented only by Claude Code and Codex; for Copilot and Antigravity,
+  symlinks work on this hub but the docs don't say.
+- `gh skill install` (gh 2.90 and later) was left out: the hub has gh 2.86, and it
+  was not tested.
