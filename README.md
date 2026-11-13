@@ -221,7 +221,7 @@ form. [CONTRIBUTING.md](CONTRIBUTING.md) has the conventions.
 ```text
 skills/<skill-name>/   the installable skill: SKILL.md plus references/
 evals/<skill-name>/    test scenarios, kept outside the installed bundle
-docs/                  the evidence the skills were built from
+docs/                  the evidence the skills were built from, and a comparison with other guides
 docs/design/           design notes: decisions and why
 agent/handoff.md       rolling state for agents working on this repository
 ```
@@ -246,8 +246,10 @@ here under CC0.)
 These skills come from lessons learned building a variety of VirtualiZarr +
 Icechunk stores of ocean data. Others have written guides and tools for related
 work, including materialized stores and pipelines at larger scale.
-[#10](https://github.com/ocean-icechunks/ocean-icechunks-skills/issues/10)
-compares them with these skills.
+[Four Icechunk playbooks](docs/other-icechunk-playbooks.md) summarizes how they
+differ from these skills and what they share. Bringing their lessons into these
+skills is an open issue,
+[#10](https://github.com/ocean-icechunks/ocean-icechunks-skills/issues/10).
 
 - [dynamical.org dataset development guide](https://github.com/dynamical-org/reformatters/blob/main/docs/dataset_development_guide.md):
   how dynamical.org's agents take a weather dataset from source exploration to a
