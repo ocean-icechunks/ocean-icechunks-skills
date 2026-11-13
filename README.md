@@ -97,6 +97,12 @@ Windows.
 Use either the personal install or the per-project one, not both, so the agent
 doesn't see two copies of the same skill.
 
+**Coming: `gh skill install`.** GitHub CLI 2.90 and later can install a skill
+straight from a repository (`gh skill install ocean-icechunks/ocean-icechunks-skills
+virtual-icechunk`), and update it with `gh skill update`. It has not been tested
+with these skills yet. The hub image will get a newer `gh` in a later update, and
+this section will be filled in then.
+
 ### Check that it worked
 
 Start a new session in your agent and ask for something the skill covers. To

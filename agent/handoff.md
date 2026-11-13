@@ -74,5 +74,6 @@ harvested into the skill on purpose. History of decisions:
 - Skill paths and commands were checked against each vendor's docs on 2026-11-13.
   Symlinks are documented only by Claude Code and Codex; for Copilot and Antigravity,
   symlinks work on this hub but the docs don't say.
-- `gh skill install` (gh 2.90 and later) was left out: the hub has gh 2.86, and it
-  was not tested.
+- `gh skill install` (gh 2.90 and later) is only mentioned as coming, untested: the hub
+  has gh 2.86. Eli will update `gh` in the py-rocket image later; then test it and fill in
+  the README section.
