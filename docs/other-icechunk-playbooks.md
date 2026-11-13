@@ -60,6 +60,33 @@ scale of job. Read on 2026-11-13.
 - Deciding per file between append and an in-place region write, so a file
   delivered twice is not stored twice.
 
+## How they fit together
+
+The four are different kinds of things. Two are agent skills, one is a set of
+guides for a code base, and one is a pipeline template. They also fit different
+stages of a project: working out a store, then running it in production.
+
+- **Stage 1, research and prototype: these Ocean Icechunks skills.** A knowledge
+  layer for ocean sources. It helps someone who has a collection of NetCDF/HDF5
+  files, on a provider's server or already in object storage, get started building
+  virtual Icechunk stores from them. It also helps with moving the files onto object
+  storage first. It is aimed at experimental and research-level stores: plan, smoke
+  test, a build that runs from a notebook or the hub, docs, and an audit.
+- **Stage 2, production pipeline: the Development Seed template.** A pipeline
+  template, not a skill. It is best suited to a store whose design is settled and
+  that has to stay current or is too big to build one batch at a time. It runs the
+  store on AWS. What stage 1 worked out (how to parse and combine the files) becomes
+  the processor you plug into it.
+- **Alongside stage 1: the Earthmover skill.** An agent skill like ours, but built
+  around file formats and tailored to Arraylake. It assumes the files are already in
+  a bucket registered with Arraylake, and it does not cover reading files over HTTPS
+  from servers such as THREDDS. Useful next to ours for formats beyond NetCDF/HDF5
+  and for forecast run collections.
+- **Lessons for stage 2: the dynamical.org guides.** Written for dynamical.org's own
+  code base and operational weather stores, so the code does not carry over. The
+  lessons do: sizing manifests, whole-file commits, how many parallel writers help,
+  and what to claim when you say a store is validated.
+
 ## Outstanding: bringing their lessons into these skills
 
 Updating `virtual-icechunk` and `archive-to-cloud` with what these projects learned
