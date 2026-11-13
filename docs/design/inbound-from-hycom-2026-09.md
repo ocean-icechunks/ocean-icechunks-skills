@@ -3,7 +3,7 @@
 Written by the session that built `ocean-icechunks/hycom` (GOFS 3.1 reanalysis, 306 TB,
 63,341 uncompressed NetCDF-3 files) and documented `ocean-icechunks/noaa-oisst`. Evidence is
 in `~/hycom/claude/notes/` (`plan-issue-1.md`, `smoke-test-findings.md`,
-`production-build-2026-09-18.md`) and `~/icechunks/claude/notes/viewers.md`. Only PR #19 (a
+`production-build-2026-09-18.md`) and `~/icechunks/claude/notes/viewers.md`. Only PR nmfs-opensci/agent-skills#19 (a
 scratch-prefix test always gets a viewer and a short README) has been folded into the skill.
 Everything below is a candidate for a Learn pass — check each against the versions then
 current before writing it in.
@@ -36,7 +36,7 @@ current before writing it in.
   `to_icechunk(region={"time": slice(a, b)})`. Restartable in any order, and the loaded
   coordinates stay in one chunk (appending adds a chunk per batch). A misaligned region
   start is refused by VirtualiZarr 2.7.3 (verified 2026-09-24; see
-  `append-alignment-issue-21.md`), so this pattern is safe from the #21 pitfall.
+  `append-alignment-issue-21.md`), so this pattern is safe from the nmfs-opensci/agent-skills#21 pitfall.
 - **Declare big-endian data as native dtype plus `bytes(endian=big)`**, not `>i2`: with `>i2`
   VirtualiZarr 2.7.3 refuses every later region/append write ("inconsistent dtypes: int16 vs
   >i2"). Probably an upstream bug in `check_same_dtypes`; unreported.

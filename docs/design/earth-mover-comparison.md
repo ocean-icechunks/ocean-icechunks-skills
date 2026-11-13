@@ -2,7 +2,7 @@
 
 Read in full on 2026-09-18 (their repo at `603e50a`). This records the verdict
 so a future session does not re-read it from scratch. What was *taken* is in
-PR #13; the format material is in
+PR nmfs-opensci/agent-skills#13; the format material is in
 [expanding-format-coverage.md](expanding-format-coverage.md).
 
 ## The two skills barely overlap

@@ -1,6 +1,6 @@
 # virtual-icechunk skill — design decisions
 
-Built 2026-09-03 from issue #4, merged as PR #6. Evidence base:
+Built 2026-09-03 from issue nmfs-opensci/agent-skills#4, merged as PR nmfs-opensci/agent-skills#6. Evidence base:
 `docs/virtual-icechunk-patterns.md`, the three fish-pace repositories,
 `docs/example-virtual-icechunk-pipeline.ipynb`, the RFROM NODD prep notebook in
 `nmfs-opensci/gobai-rfrom-icechunks`, and official docs for icechunk 2.2.0,
@@ -25,12 +25,12 @@ confusion in the older repositories traces back to conflating them.
   workaround. The skill records "no validated example" rather than guessing, and
   explicitly forbids relabelling the User-Agent fix as an ERDDAP or CORS
   finding. Do not add an ERDDAP section without a real example.
-- **`agents/openai.yaml` omitted** even though issue #4 listed it, because
+- **`agents/openai.yaml` omitted** even though issue nmfs-opensci/agent-skills#4 listed it, because
   `CONTRIBUTING.md` says bundles hold only `SKILL.md` plus
-  references/scripts/assets. Flagged in PR #6 as a convention conflict for Eli
+  references/scripts/assets. Flagged in PR nmfs-opensci/agent-skills#6 as a convention conflict for Eli
   to reconcile.
-- **Browser/WASM and CORS were out**, untested — *superseded twice*. PR #10
-  (2026-09-04) brought CORS in with tested policies; PR #13 (2026-09-18) brought
+- **Browser/WASM and CORS were out**, untested — *superseded twice*. PR nmfs-opensci/agent-skills#10
+  (2026-09-04) brought CORS in with tested policies; PR nmfs-opensci/agent-skills#13 (2026-09-18) brought
   browser rendering in, because the OA-indicators viewer draws. What survives
   intact is the rule underneath: inferring browser support from a Python read is
   still an error, and so is inferring it from curl, or from one store having
@@ -46,7 +46,7 @@ confusion in the older repositories traces back to conflating them.
   filename-derived time is **not preferred**; the PACE **CHL → BGS** rename is
   real and should be used.
 
-The full set of 16 answered questions is on issue #4; the durable subset is in
+The full set of 16 answered questions is on issue nmfs-opensci/agent-skills#4; the durable subset is in
 `references/learn-and-evolve.md`.
 
 ## Emphases that came from Eli directly, not from the analysis
@@ -82,7 +82,7 @@ cells every build notebook grows.
 
 Since then `ocean-icechunks/icechunks` adopted the skill — its `CLAUDE.md` names it as
 the authority to prefer over that repository's own notebooks — and the
-OA-indicators store was built under it on 2026-09-17. PR #13 harvested what that
+OA-indicators store was built under it on 2026-09-17. PR nmfs-opensci/agent-skills#13 harvested what that
 build taught, including one place where the skill was flatly wrong (it claimed
 no virtual store had ever rendered in a browser) and one mechanism claim that was
 wrong in a way that would have misdirected a diagnosis (`Range` was said to force

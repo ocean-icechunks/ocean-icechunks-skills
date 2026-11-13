@@ -1,4 +1,4 @@
-# Append alignment (issue #21)
+# Append alignment (issue nmfs-opensci/agent-skills#21)
 
 The CEFI audit found that `vz.to_icechunk(append_dim=...)` silently misplaces data when
 a file's length along the append axis is not a multiple of its chunk (CEFI NEP daily:
