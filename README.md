@@ -6,6 +6,12 @@ around them. They work with any coding agent that supports the open
 [Agent Skills](https://agentskills.io/specification) format, including Claude
 Code, GitHub Copilot, OpenAI Codex and Google Antigravity.
 
+The skills focus on **[VirtualiZarr](https://virtualizarr.readthedocs.io) +
+Icechunk**: virtual stores that hold only Zarr metadata and references to
+NetCDF/HDF5 files left where they are. They do not cover materialized stores
+that copy and rechunk the data. `archive-to-cloud` is the step before a virtual
+store, when the files first need to be copied somewhere a store can reference.
+
 ## Skills
 
 | Skill | What it covers | Status | Maintainer |
@@ -215,7 +221,7 @@ form. [CONTRIBUTING.md](CONTRIBUTING.md) has the conventions.
 ```text
 skills/<skill-name>/   the installable skill: SKILL.md plus references/
 evals/<skill-name>/    test scenarios, kept outside the installed bundle
-docs/                  the evidence the skills were built from
+docs/                  the evidence the skills were built from, and a comparison with other guides
 docs/design/           design notes: decisions and why
 agent/handoff.md       rolling state for agents working on this repository
 ```
@@ -234,3 +240,29 @@ for any purpose, including commercially. Attribution is appreciated but not
 required — you do not need to cite me or ask permission. (The files that came
 from nmfs-opensci/agent-skills were under Apache-2.0 there; they are released
 here under CC0.)
+
+## More resources
+
+These skills come from lessons learned building a variety of VirtualiZarr +
+Icechunk stores of ocean data. Others have written guides and tools for related
+work, including materialized stores and pipelines at larger scale.
+[Four Icechunk playbooks](https://claude.ai/artifact/Q9ZqcXiqYZVBc2tXygyHVd)
+summarizes how they differ from these skills, what they share, and how they fit
+together (the same content is in
+[docs/other-icechunk-playbooks.md](docs/other-icechunk-playbooks.md)). Bringing their lessons into these
+skills is an open issue,
+[#10](https://github.com/ocean-icechunks/ocean-icechunks-skills/issues/10).
+
+- [dynamical.org dataset development guide](https://github.com/dynamical-org/reformatters/blob/main/docs/dataset_development_guide.md):
+  how dynamical.org's agents take a weather dataset from source exploration to a
+  published Icechunk store, virtual and materialized.
+- [Earthmover `icechunk-datacube-ingestion` skill](https://github.com/earth-mover/agent-skills/tree/main/icechunk-datacube-ingestion):
+  an agent skill for ingesting datacubes into Icechunk or Arraylake, organized by
+  file format (HDF5, NetCDF3, GRIB, TIFF, Kerchunk, Zarr).
+- [Development Seed `virtualizarr-data-pipelines`](https://github.com/developmentseed/virtualizarr-data-pipelines):
+  a template repository for VirtualiZarr + Icechunk pipelines on AWS, with a
+  parallel backfill and processing of new files as they arrive.
+- [dynamical.org binary rounding](https://github.com/dynamical-org/reformatters/blob/main/src/reformatters/common/binary_rounding.py):
+  rounds float32 values to fewer mantissa bits so materialized chunks compress
+  better. It does not apply to virtual stores, which reference the provider's
+  bytes unchanged.
