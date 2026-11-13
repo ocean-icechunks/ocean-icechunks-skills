@@ -107,8 +107,10 @@ def scan_for_secrets
     next [] if path.each_filename.include?(".git")
 
     begin
-      content = path.read(encoding: "UTF-8")
-    rescue EncodingError, SystemCallError
+      # Read bytes, not text: the patterns are ASCII, so they match inside binary
+      # files too (a .pyc, a notebook image) instead of raising on invalid UTF-8.
+      content = path.binread
+    rescue SystemCallError
       next []
     end
     SECRET_PATTERNS.filter_map do |label, pattern|

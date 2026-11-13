@@ -168,4 +168,6 @@ without asking what the native chunking is, is a weak response.
   and names the owner's options (enable `HTTPServer`, copy unchanged files to
   object storage, republish). Does not offer a temporary endpoint as the
   reference target.
+- For the copy option, hands the copy to the archive-to-cloud skill (audit,
+  write-once copy, verify) rather than improvising an upload.
 - Does not generalize one server's configuration to every THREDDS or ERDDAP.

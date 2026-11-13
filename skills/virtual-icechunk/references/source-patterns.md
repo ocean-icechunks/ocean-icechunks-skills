@@ -165,7 +165,8 @@ nothing about another's.
 
 The source cannot be virtualized from outside, whatever the parser. The options
 are the data owner's to grant: enable `HTTPServer`; copy the unchanged files to
-object storage and virtualize against the copy; or republish reprocessed files
+object storage and virtualize against the copy (the archive-to-cloud skill);
+or republish reprocessed files
 (`source-file-design.md`). A **temporary** file endpoint is fine for copying
 but never for references: every reference breaks when it is switched off.
 

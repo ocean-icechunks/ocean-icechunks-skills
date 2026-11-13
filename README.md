@@ -11,10 +11,7 @@ Code, GitHub Copilot, OpenAI Codex and Google Antigravity.
 | Skill | What it covers | Status | Maintainer |
 | --- | --- | --- | --- |
 | [virtual-icechunk](skills/virtual-icechunk/) | Research, build, validate, document, and audit virtual Icechunk stores that reference remote NetCDF/HDF5 files in place. | Experimental | [@eeholmes](https://github.com/eeholmes) |
-
-Planned: `archive-to-cloud`, for copying a provider's NetCDF archive unchanged
-to object storage and checking the copies
-([#4](https://github.com/ocean-icechunks/ocean-icechunks-skills/issues/4)).
+| [archive-to-cloud](skills/archive-to-cloud/) | Audit a provider's NetCDF/HDF5 archive, copy it unchanged to object storage, and verify the copies. Comes before a virtual store when the files are not already in a bucket it can reference. | Experimental | [@eeholmes](https://github.com/eeholmes) |
 
 Status levels: **Experimental** (exploratory, may change substantially),
 **Provisional** (useful in practice, still gathering evidence), **Stable**
@@ -45,7 +42,7 @@ Pick one:
 
 ### Personal (all your projects)
 
-Clone this repository once, then link the skill into the folder each agent
+Clone this repository once, then link the skills into the folder each agent
 reads:
 
 ```bash
@@ -53,7 +50,9 @@ git clone https://github.com/ocean-icechunks/ocean-icechunks-skills ~/ocean-icec
 
 for dir in ~/.claude/skills ~/.agents/skills ~/.gemini/config/skills; do
   mkdir -p "$dir"
-  ln -sfn ~/ocean-icechunks-skills/skills/virtual-icechunk "$dir/virtual-icechunk"
+  for skill in virtual-icechunk archive-to-cloud; do
+    ln -sfn ~/ocean-icechunks-skills/skills/$skill "$dir/$skill"
+  done
 done
 ```
 
@@ -87,6 +86,9 @@ rsync -a --delete ~/ocean-icechunks-skills/skills/virtual-icechunk/ .claude/skil
 git add .agents/skills .claude/skills
 git commit -m "Add the virtual-icechunk skill from ocean-icechunks-skills"
 ```
+
+Repeat the two `rsync` lines with `archive-to-cloud` in place of
+`virtual-icechunk` if the project also copies source files to object storage.
 
 `.agents/skills/` is read by Codex, Copilot and Antigravity, and `.claude/skills/`
 by Claude Code (and also by Copilot). If everyone on the project uses the same
