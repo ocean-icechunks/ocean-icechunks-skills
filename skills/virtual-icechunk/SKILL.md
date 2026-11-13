@@ -46,6 +46,17 @@ Do not skip ahead. Each step gates the next.
 smoke test and the production build are both built from, plus the code for
 reading a finished store.
 
+## First, are the files where a store can reference them?
+
+A virtual store points at the source files where they sit, so they must be
+reachable by every reader, at stable URLs, with byte-range reads. A public
+cloud bucket usually is. A provider's own server often is not: files only
+reachable over SSH, or only through THREDDS or ERDDAP services that generate
+responses instead of serving files (`references/source-patterns.md`). If the
+files must first be copied, unchanged, to object storage, that is a separate
+job with its own risks, covered by the **archive-to-cloud** skill (audit, copy,
+verify). Then virtualize against the copies.
+
 ## First, check that virtual is the right answer
 
 Virtualization preserves the source's chunk layout exactly. If the source files

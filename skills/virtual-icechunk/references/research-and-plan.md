@@ -34,6 +34,10 @@ usually different credentials. Never let one imply the other.
   and ERDDAP".
 - Probe a public server gently: catalog and metadata requests, pauses between
   them, and at most one time step of data. It is serving other people.
+- If the files are not somewhere every reader can reference them (only on the
+  provider's own server, or behind generated services), the plan's first step
+  is copying them unchanged to object storage. Plan that with the
+  archive-to-cloud skill; its audit also collects the per-file facts below.
 
 ## 3. Inspect representative files
 
