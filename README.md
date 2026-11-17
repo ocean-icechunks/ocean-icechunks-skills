@@ -18,6 +18,7 @@ store, when the files first need to be copied somewhere a store can reference.
 | --- | --- | --- | --- |
 | [virtual-icechunk](skills/virtual-icechunk/) | Research, build, validate, document, and audit virtual Icechunk stores that reference remote NetCDF/HDF5 files in place. | Experimental | [@eeholmes](https://github.com/eeholmes) |
 | [archive-to-cloud](skills/archive-to-cloud/) | Audit a provider's NetCDF/HDF5 archive, copy it unchanged to object storage, and verify the copies. Comes before a virtual store when the files are not already in a bucket it can reference. | Experimental | [@eeholmes](https://github.com/eeholmes) |
+| [adding-ugrid-conventions](skills/adding-ugrid-conventions/) | Add UGRID metadata to unstructured-mesh model output (FVCOM, SHYFEM, SCHISM, ADCIRC) so xugrid and other tools recognize the mesh, including for virtual Icechunk stores. Covers FVCOM's transposed connectivity and the silent `start_index` failure. | Experimental | [@rsignell](https://github.com/rsignell) |
 
 Status levels: **Experimental** (exploratory, may change substantially),
 **Provisional** (useful in practice, still gathering evidence), **Stable**
