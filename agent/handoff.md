@@ -86,6 +86,22 @@ Seed `virtualizarr-data-pipelines`, dynamical bit rounding). Shipped in #11.
   README) and `docs/other-icechunk-playbooks.md`. The artifact's source HTML was in a session
   scratchpad and is gone; to edit it, read it by URL first and republish to the same URL.
 
+## HYCOM GOMb0.01 lessons: shipped (#20 → #25, merged 2026-11-19)
+
+Evidence: ocean-icechunks/hycom `claude/notes/issue-21-research/findings.md` and `plan-issue-17.md`.
+What a later session needs to know, beyond the diff:
+
+- **The build-only zero cache was run, not just read**: on icechunk 2.3.1, a zero
+  `CachingConfig(num_chunk_refs=0)` passed to `Repository.open` is not saved (readers keep the
+  default cache, and the saved manifest splitting still applies). Passed to `create`, it is
+  saved and reaches readers. The full build loop snippet was not run.
+- **Item 16 of the issue was out of date**: Eli confirmed the gridlook group viewer renders
+  (2026-11-19, recorded in the HYCOM plan), so the skill calls it verified.
+- Still labelled Unverified: creating empty arrays without a manifest instead of a skeleton (planned
+  in HYCOM, not run). Update it once the full-record build reports.
+- Left alone on purpose: the wrong `to_icechunk(encoding=…)` snippets (#13, still open) and the
+  `chunks={}`/`_FillValue` lessons (#14).
+
 ## Open threads
 
 - **Standardized READMEs, #21** (opened 2026-11-19, not started): the product and store
@@ -109,7 +125,8 @@ Seed `virtualizarr-data-pipelines`, dynamical bit rounding). Shipped in #11.
 - **Append alignment, #3 (was nmfs-opensci/agent-skills#21)**: decisions made, failure verified,
   no skill edits yet. [append-alignment-issue-21.md](../docs/design/append-alignment-issue-21.md).
   Eli has an upstream VirtualiZarr issue drafted but not posted.
-- **Lessons from the HYCOM build await a Learn pass**, including two places the
+- **Lessons from the 2026-09 HYCOM GOFS 3.1 build await a Learn pass** (separate from #20,
+  which shipped the GOMb0.01 lessons), including two places the
   skill is wrong: [inbound-from-hycom-2026-09.md](../docs/design/inbound-from-hycom-2026-09.md).
 - **Formats beyond NetCDF/HDF5 and FMRC**: deliberately deferred by Eli
   (2026-09-18). [expanding-format-coverage.md](../docs/design/expanding-format-coverage.md).
