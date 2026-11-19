@@ -171,3 +171,23 @@ without asking what the native chunking is, is a weak response.
 - For the copy option, hands the copy to the archive-to-cloud skill (audit,
   write-once copy, verify) rather than improvising an upload.
 - Does not generalize one server's configuration to every THREDDS or ERDDAP.
+
+## 10. A long build over many uncompressed HDF5 files
+
+- Scans headers in processes, not threads, because h5py serializes every call
+  on one lock; uses `forkserver` or `spawn`, not `fork`.
+- Calls `gc.collect()` after every batch, and opens the build with
+  `CachingConfig(num_chunk_refs=0)` through `Repository.open`, **not** in the
+  config passed to `Repository.create`.
+- Logs current RSS per batch, not `ru_maxrss`.
+- Warns that an empty virtual skeleton over 23 years at one depth per chunk is
+  tens of GB, and proposes empty arrays without a manifest, then region writes.
+- Splits the 10-depth source chunk into one-depth virtual chunks only because
+  it is uncompressed, and checks the offsets against h5py.
+- Checks each file's layout (chunk shape, dtype, filters, chunk sizes, chunks
+  inside the file), not its size, and fingerprints attributes and coordinates.
+- Compares the `_FillValue` attribute with the value on land, bit for bit.
+- Keeps the source's time units string verbatim.
+- Tells readers to retry a long read that gets an S3 500, and does not call it
+  corruption.
+- Measures store size from the final snapshot, not from everything on disk.

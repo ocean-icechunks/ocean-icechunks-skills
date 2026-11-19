@@ -23,7 +23,20 @@ values, attributes, chunk shapes, and codec compatibility. Confirm the partition
 is genuinely homogeneous — that is what makes the virtual array legal at all.
 
 Verify fill and missing-value decoding against known source values, not against
-the assumption that it worked.
+the assumption that it worked. Compare the declared fill with a land or missing
+value read from a source file **bit for bit**: a fill a few ulps off the value
+on disk leaves those points unmasked (`research-and-plan.md`).
+
+Check metadata the store rewrites against what the source says:
+
+- **Time units.** xarray's datetime encoding rewrites the units string
+  (`days since 1900-12-31 00:00:00` became `days since 1900-12-31`). To keep a
+  source's convention verbatim, write the time as plain numbers and copy the
+  source's `units` attribute.
+- **CF names and units against the CF standard name table itself**, not only
+  with a compliance checker. IOOS compliance-checker 6.1.0 (`cf:1.11`) passed
+  `standard_name = sea_surface_elevation`, which is only an alias, and
+  `units = psu`, which is not a UDUNITS unit.
 
 ## Data
 

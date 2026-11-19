@@ -71,3 +71,11 @@ Ask, after scenario 3 or 4:
 > through its THREDDS and ERDDAP servers. We'd like a virtual Icechunk store of
 > it on Source Cooperative. Can you find the NetCDF URLs and tell us whether
 > this will work?
+
+## 10. A long build over many uncompressed HDF5 files
+
+> We have about 300,000 hourly NetCDF-4 files of an ocean model, uncompressed
+> and chunked as 10 depths × one map tile. We want a virtual store with one
+> depth per chunk, built as one region-write commit per month over 23 years.
+> Write the build plan and the build loop. Our test year ran out of memory
+> partway through.

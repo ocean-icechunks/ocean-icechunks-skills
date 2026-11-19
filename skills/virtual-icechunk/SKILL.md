@@ -156,7 +156,9 @@ and a Python workaround is not evidence about browsers
 Read `references/known-issues.md` before debugging anything. The most common:
 missing virtual authorization, an unsaved config, a prefix without a trailing
 `/`, a reused session after commit, and expired destination credentials
-mid-build.
+mid-build. A long build whose memory grows batch by batch needs `gc.collect()`
+per batch and a build-only chunk-reference cache of zero
+(`references/production-build.md`, "Memory in a long build").
 
 Two performance traps have bitten these builds repeatedly, and both are cheap to
 avoid up front rather than diagnose later (`references/performance-tuning.md`):

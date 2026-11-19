@@ -111,8 +111,39 @@ Real archives contain broken files. Check explicitly for:
 - one-time-step-per-file products, which produce one-element chunks and very
   slow metadata reads unless the loaded coordinate is chunked deliberately.
 
+- a `_FillValue` attribute that does not match the value actually written. Read
+  a land or missing point and compare its **bits** with the attribute's. In
+  every HYCOM GOMb0.01 file, `_FillValue` is float32(1.267651e30) but land holds
+  2**100, 3 ulps away. CF readers mask by exact equality, so xarray on a source
+  file left 945,478 land points at 1.27e30. The store should declare the value
+  on disk, and never as a decimal literal that rounds to something else;
+- a per-file attribute that changes over time, such as `cell_methods = "MT: mean"`
+  on hours a provider rebuilt by averaging neighbours. It cannot live on a
+  variable that spans every file. Make it a small integer flag along the combine
+  axis, with values taken from each file's own attribute, and link it from each
+  variable with `ancillary_variables`. Do not invent a flag the files do not
+  support.
+
 Every repair is dataset-specific. Write down what you changed, why, and which
 source files you excluded. See `known-issues.md`.
+
+### Check every file, not a sample
+
+For a large archive, the representative files above find the transitions. Only
+a check of **every** file finds the odd one out, and the reference scan
+(`production-build.md`) already opens every file, so do it there.
+
+- **Check each file's layout, not its size.** Compare shape, chunk shape, dtype,
+  filters, each chunk's byte size, and that every chunk ends inside the file
+  (which catches truncation). One HYCOM file had another experiment's chunking
+  and was 102 kB larger than its neighbours. A size band would have rejected it
+  for the wrong reason, and would pass a file of the right size with the wrong
+  layout. A file that fails is skipped and listed with its reason.
+- **Fingerprint per-file attributes and coordinate values, and report rather
+  than fail.** Group files by a hash of their attributes and a checksum of each
+  coordinate, then look at every group that is not the majority. That is how
+  averaged stand-in hours and a 3e-5° longitude drift between file kinds were
+  found. Decide per finding whether it stops the build.
 
 ## 6. Predict the read performance
 
