@@ -1,18 +1,29 @@
 ---
 name: adding-ugrid-conventions
-description: Use when a dataset from an unstructured-mesh ocean model (FVCOM, SHYFEM, SCHISM, ADCIRC, Delft3D FM) lacks UGRID metadata, or when preparing such data (including virtual Icechunk stores) so xugrid, hvplot and other tools recognize the mesh. Covers the mesh_topology variable, the cf_role, start_index and face_dimension attributes on connectivity (including FVCOM's transposed nv), node and face coordinates, the mesh and location attributes on data variables, and adding the mesh_topology variable to a virtual store after writing.
+description: Use when a dataset from an unstructured-mesh ocean model (FVCOM, SHYFEM, SCHISM, ADCIRC, ICON, Delft3D FM) lacks UGRID metadata, or when preparing such data (including virtual Icechunk stores) so xugrid, hvplot and other tools recognize the mesh. Covers the mesh_topology variable, the cf_role, start_index and face_dimension attributes on connectivity (including FVCOM's transposed nv), node and face coordinates, the mesh and location attributes on data variables, and adding the mesh_topology variable to a virtual store after writing.
 ---
 
 # Adding UGRID conventions to unstructured-mesh model output
 
-**Status: Experimental.** The guidance comes from FVCOM and SHYFEM output; SCHISM,
-ADCIRC and Delft3D FM are named in the description but have not been exercised.
+**Status: Experimental.** The guidance comes from FVCOM, SHYFEM, SCHISM, ADCIRC and ICON
+output. Delft3D FM is named in the description but has not been exercised.
+
+**Check first:** some output is already UGRID (newer SCHISM with `iof_ugrid`, NOAA STOFS-2D
+ADCIRC). Try `xu.UgridDataset` on the file before adding anything.
 
 Most model files hold the mesh (node coordinates, triangle connectivity) but
 do not label it, so tools cannot recognize it. Adding UGRID means adding
-attributes and, usually, one new scalar variable. It needs no model-specific
-skill; the model-specific parts are the variable names and the three gotchas
-below.
+attributes and, usually, one new scalar variable. The general pattern is
+below; the model-specific parts (variable names, units, quirks) are in the per-model
+notes.
+
+| Model | Notes | Main differences |
+| --- | --- | --- |
+| FVCOM | [references/fvcom.md](references/fvcom.md) | `nv` is `(three, nele)`, 1-based |
+| SHYFEM | [references/shyfem.md](references/shyfem.md) | placeholder `topology` variable already exists |
+| ADCIRC | [references/adcirc.md](references/adcirc.md) | STOFS-2D files are already UGRID; `fort.14` is text |
+| SCHISM | [references/schism.md](references/schism.md) | native UGRID output, projected coordinates, quads, string mesh variable |
+| ICON | [references/icon.md](references/icon.md) | separate grid file, coordinates in radians |
 
 ## The attributes
 
@@ -45,12 +56,13 @@ below.
 
 1. **Dimension order of the connectivity array.** UGRID expects
    `(n_face, 3)`, with the face dimension first. FVCOM's `nv` is
-   `(three, nele)`, the other way round. Do not transpose (impossible in a
-   virtual store without rewriting chunks); set `face_dimension` on the mesh
+   `(three, nele)`, the other way round. In a virtual store you cannot transpose
+   (it would mean rewriting chunks), so set `face_dimension` on the mesh
    topology variable to the name of the face dimension (`"nele"`) so readers
    know which axis is which. Without it, the array is read transposed or fails.
-2. **`start_index`.** UGRID defaults to 0-based indexing. FVCOM and SHYFEM
-   connectivity is 1-based, so set `start_index = 1` on the connectivity
+   For a dataset opened in memory, transposing the array also works.
+2. **`start_index`.** UGRID defaults to 0-based indexing. FVCOM, SHYFEM, SCHISM, ADCIRC
+   and ICON connectivity is 1-based, so set `start_index = 1` on the connectivity
    variable. Omitting it shifts every triangle by one node.
 3. **Static variables are not coordinates.** `nv`, bathymetry (`h`) and other
    static arrays stay data variables, whatever concat treatment they need.
@@ -93,10 +105,7 @@ connectivity gives obviously scrambled triangles.
 
 ## Source examples
 
-- FVCOM wave store, all attributes and the post-write `mesh_topology`:
-  [OpenScienceComputing/necofs-provider](https://github.com/OpenScienceComputing/necofs-provider),
-  `process_wave_timeseries.py` (`CF_VAR_ATTRS`, `MESH_TOPOLOGY_ATTRS`,
-  `add_ugrid_metadata`, `write_mesh_topology`).
-- SHYFEM (a placeholder `topology` variable plus `element_index`):
-  [OpenScienceComputing/MAGICA-School-2026](https://github.com/OpenScienceComputing/MAGICA-School-2026),
-  `cf_ugrid_tutorial.ipynb`, section 2.3.
+Each per-model note links its examples (public repositories and gists). The FVCOM and
+SHYFEM ones are
+[necofs-provider](https://github.com/OpenScienceComputing/necofs-provider) and
+[MAGICA-School-2026](https://github.com/OpenScienceComputing/MAGICA-School-2026).

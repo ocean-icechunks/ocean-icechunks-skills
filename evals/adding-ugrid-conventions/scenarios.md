@@ -24,6 +24,24 @@ production store; any write must target an explicitly scratch store or prefix.
 > The Icechunk store is already built and committed. I want to add the mesh variable without
 > rebuilding everything.
 
-## 5. A model the skill has not been used on
+## 5. A SCHISM store that viewers cannot read
 
-> Prepare this SCHISM output so xugrid recognises the mesh.
+> I built a virtual Icechunk store from SCHISM `out2d` and per-variable NetCDF files. xugrid
+> says a connectivity array has an unexpected extra dimension, and a browser viewer finds no
+> mesh. The coordinates are in State Plane metres and `SCHISM_hgrid_face_nodes` has four
+> columns.
+
+## 6. ICON output
+
+> I have ICON ocean output as a Zarr reference plus a separate grid Zarr. Make it work with
+> xugrid. The coordinates are `clon`, `clat`, `vlon`, `vlat` and the connectivity is
+> `vertex_of_cell` with shape `(3, ncells)`.
+
+## 7. ADCIRC forecast output
+
+> Open the latest NOAA STOFS-2D Global NetCDF with xugrid and plot water velocity for the
+> Chesapeake Bay region. Do whatever metadata work is needed.
+
+## 8. A model the skill has not been used on
+
+> Prepare this Delft3D FM output so xugrid recognises the mesh.
