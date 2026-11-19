@@ -88,6 +88,14 @@ Seed `virtualizarr-data-pipelines`, dynamical bit rounding). Shipped in #11.
 
 ## Open threads
 
+- **Standardized READMEs, #21** (opened 2026-11-19, not started): the product and store
+  READMEs on Source Coop are generated from a source file (YAML by default) plus a render
+  script that pulls tables and the snapshot from the store. Phase 1 is the templates;
+  phase 2 is a few layouts to compare. Eli does not write the READMEs. Agents write
+  them from `project-docs.md` and then add sections on request, which is why they drift.
+  The schema must be broad enough to hold those requests. "How to open" gets restructured
+  so it isn't one code block. Overlaps #19.
+
 - **Lessons from the other playbooks, #10**: candidate additions (manifest-split cost
   model, "what validated means", append vs region writes, parallel builds, license check,
   Kerchunk is in *maintenance mode* not "deprecated", NetCDF3 sub-chunk refs for #3).
