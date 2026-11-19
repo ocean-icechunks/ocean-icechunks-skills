@@ -257,10 +257,22 @@ shape; it is a second representation — keep full resolution virtual for analys
 and add small materialized multiscale overviews chunked one-frame-per-chunk for
 visualization. Downsampled overviews are cheap relative to the full store.
 
+## A store whose data are in a group
+
+gridlook opens a group from a URL that ends in the group
+(`icechunk+https://…/store/hourly`): it walks up the path to the repository
+root and opens the rest as the group. Give each store its own viewer catalog
+entry, with its own dimension names. Observed once, on the HYCOM GOMb0.01
+scratch store (gridlook at `eeholmes/gridlook` 3cca0cc, 2026-11-19): curl
+confirmed CORS on both hosts, and the project owner confirmed it renders, with
+an extra `Depth` dimension selected through the URL fragment. Other viewers may
+need the group named some other way.
+
 ## What is verified, and what is not
 
 **Verified**: that a virtual store renders end to end in a browser across two
-hosts (OA indicators, confirmed 2026-09-18); that a missing policy on the source
+hosts (OA indicators, confirmed 2026-09-18; and a store in a group with an `s3://`
+source bucket, HYCOM GOMb0.01, 2026-11-19); that a missing policy on the source
 host blocks exactly the science arrays and nothing else (CoastWatch OHC);
 that a single-range request is safelisted, so the ranged GET's
 `Access-Control-Allow-Origin` is what decides; the exact GCS policy that works;

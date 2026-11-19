@@ -137,6 +137,47 @@ Manifests load lazily, so the first read of an array pays the fetch.
 `path_matches`, combined via `and_conditions`/`or_conditions`) loads matching
 manifests when a session opens — memory for lower first-read latency.
 
+**Large remote manifests cost less than feared, in-region.** One observation
+(HYCOM GOMb0.01, 28 M references for one year, one manifest per month, read from
+Source Cooperative in us-west-2): open took 1.3 s against 0.03 s locally, and
+the first touch of a month about 0.3 s. Year-long reads matched a local
+repository, because the source reads bound them. Readers outside the region
+were not measured.
+
+**Measure store size from the final snapshot.** Each commit rewrites the whole
+manifest split it touches, and the superseded manifests stay on disk as
+history. Monthly commits into 730-step splits left 129 manifest files where
+about 66 were needed: about 11 B per reference on disk against 6 B for one
+month. Count only what the final snapshot references, or expire old snapshots
+first, before quoting a size. Aligning splits with commit batches should reduce
+the history; that was not measured.
+
+## Splitting an uncompressed source chunk
+
+**Experimental: one build.** A virtual chunk is a byte range, so one
+**uncompressed** source chunk can be referenced as several smaller virtual
+chunks along its slowest-varying dimension. On HYCOM's 3-D files, a tile of 10
+depths became `10/d` chunks of `d` depths, at `offset + k·d·level_bytes` with
+length `d·level_bytes`. HDF5 pads edge chunks to full size, as Zarr does, so
+the two grids match byte for byte. Values read back were identical to h5py's at
+d = 1, 2 and 10.
+
+The trade-off, measured on one year (in-region, local repository):
+
+| | d = 1 | d = 2 | d = 10 (native) |
+|---|---|---|---|
+| References | 28.1 M | 14.1 M | 2.9 M |
+| Manifests | 316 MB | 160 MB | 34 MB |
+| Point time series, one depth, a year | 17 s | 27 s | 117 s |
+| 200 × 200 box over 4 tiles, a year | 58 s | 112 s | 448 s |
+| One-depth map, one hour | 0.5 s | 0.3 s | 0.3 s |
+
+Time series and boxes were 2–8× faster at d = 1 than at the native chunk, for
+10× the references. That also multiplies build memory (`production-build.md`).
+It works only where the chunk is uncompressed and unfiltered, so the byte
+ranges are computable; a compressed chunk cannot be split. Check offsets against
+h5py's `get_chunk_info` in the smoke test.
+
 ## Unfixable: the source's native chunk layout
 
 Virtualization preserves source chunks exactly. If a daily global field is
