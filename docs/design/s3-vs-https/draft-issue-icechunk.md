@@ -31,11 +31,17 @@ not the S3 API.
 (`object_store` 0.14 `src/client/mod.rs`: "HTTP/2 is known to be significantly slower than HTTP/1, so we
 default to HTTP/1 for now"). See [apache/arrow-rs-object-store#104](https://github.com/apache/arrow-rs-object-store/issues/104):
 one HTTP/2 client stuck at ~250 MB/s whatever the concurrency, against ~1,280 MB/s over HTTP/1.1. It points to
-hyper's HTTP/2 client. Other clients do better over HTTP/2: on Source Cooperative curl and GDAL read as fast as
-over HTTP/1.1, and on OSN curl is 2.3× slower over HTTP/2 against 7× for the Rust clients.
+hyper's HTTP/2 client.
 
 **Where in the code (v2.3.1):** `icechunk-s3/src/lib.rs` `mk_client` uses the SDK's default HTTP client;
 `aws-smithy-http-client` 1.5 offers ALPN `["h2", "http/1.1"]` (`src/client/tls/rustls_provider.rs:322`).
+
+**Why this shows up in Icechunk and not elsewhere:** the tools people commonly use to read the same files are
+largely unaffected. xarray with fsspec/s3fs reads through aiohttp, and boto3 and the AWS CLI through urllib3. Both
+speak only HTTP/1.1. `object_store` (obstore, and Icechunk's `http_store` and `gcs_store`) chooses HTTP/1.1. GDAL
+and curl use HTTP/2 but through libcurl/nghttp2, which handles it well: as fast as HTTP/1.1 on Source Cooperative,
+and 2.3× slower on OSN, against 7× for the Rust clients. Icechunk's `s3_store` is the unusual combination: it
+accepts HTTP/2 and uses hyper's HTTP/2 client.
 
 ## Reprex
 
