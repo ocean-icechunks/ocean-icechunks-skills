@@ -1,6 +1,6 @@
 """Read the H (https://) and S (s3://) test stores anonymously and time the same reads.
 
-Usage: python bench.py [--dataset roms|oisst] [--repeats N] [--label NAME] [--json FILE]
+Usage: python bench.py [--dataset roms|oisst|globcolour] [--repeats N] [--label NAME] [--json FILE]
 Needs only icechunk, xarray, zarr, numpy. No credentials.
 """
 import argparse
@@ -19,10 +19,13 @@ import xarray as xr
 import zarr
 
 ROOT = "https://data.source.coop/ocean-icechunks/test-repo/s3-vs-https"
-# name: (store folder, variable to read)
+# name: (store folder, variable to read, region box or None)
 DATASETS = {
-    "roms": ("roms_reanalysis_8day", "temp"),     # Source Coop sources, ~8.3 MB uncompressed chunks
-    "oisst": ("oisst_nodd_64day", "sst"),         # NODD AWS us-east-1 sources, ~1 MB gzip chunks
+    "roms": ("roms_reanalysis_8day", "temp", None),   # Source Coop sources, ~8.3 MB uncompressed chunks
+    "oisst": ("oisst_nodd_64day", "sst", None),       # NODD AWS us-east-1, ~1 MB gzip chunks
+    # CloudFerro (Warsaw) S3-compatible store, 256x256 gzip chunks. A global day is 578 chunks and
+    # 150 MB, so reads use a 1024 x 2048 box: 32 chunks per day, 512 for all 16 days (~128 MB).
+    "globcolour": ("globcolour_chl_16day", "CHL", {"lat": slice(1024, 2048), "lon": slice(4096, 6144)}),
 }
 DATASET = "roms"
 
@@ -55,8 +58,8 @@ def pick_var(ds, prefer="temp"):
     return max(cands, key=lambda v: (ds[v].ndim, ds[v].size))
 
 
-def cases(ds, var):
-    a = ds[var]
+def cases(ds, var, box=None):
+    a = ds[var].isel(**box) if box else ds[var]
     mid = {d: a.sizes[d] // 2 for d in a.dims if d != "time"}
     surf = {d: 0 for d in ("depth", "zlev") if d in a.dims}
     return {
@@ -86,7 +89,7 @@ def run(repeats=3, label=None, kinds=("H", "S"), dataset=None):
             dt, ds = timed(lambda: open_ds(kind, dataset))
             results["times"].setdefault(kind, {}).setdefault("open", []).append(dt)
             var = pick_var(ds, DATASETS[dataset][1])
-            for name, fn in cases(ds, var).items():
+            for name, fn in cases(ds, var, DATASETS[dataset][2]).items():
                 dt, arr = timed(fn)
                 results["times"][kind].setdefault(name, []).append(dt)
                 if r == 0:
