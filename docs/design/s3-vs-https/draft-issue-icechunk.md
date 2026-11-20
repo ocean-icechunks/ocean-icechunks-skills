@@ -1,6 +1,6 @@
 <!-- DRAFT for earth-mover/icechunk. Not posted. Review before filing. -->
 
-# `s3_store` reads are ~2× slower than `http_store` on endpoints that offer HTTP/2
+# `s3_store` reads are 2–7× slower than `http_store` on endpoints that offer HTTP/2
 
 **Ask:** please make `s3_store` virtual chunk reads use HTTP/1.1, as `http_store` already does, or give
 users a way to force it.
@@ -10,26 +10,29 @@ server offers it. `http_store` uses `object_store`, which stays on HTTP/1.1. So 
 HTTP/2, expect `s3_store` to read the same bytes more slowly than `http_store`. On endpoints that offer only
 HTTP/1.1 (AWS S3, Tigris, Wasabi, CloudFerro) both clients use HTTP/1.1 and read equally fast.
 
-Endpoints we found offering HTTP/2: Source Cooperative (`data.source.coop`), OSN (`uri.osn.mghpcc.org`) and
-GCS (`storage.googleapis.com`). We measured two of them. The same 64 virtual chunks (530 MB) read, median of 3:
+Endpoints we found offering HTTP/2: Source Cooperative (`data.source.coop`), GCS (`storage.googleapis.com`)
+and OSN pods (`udel1`, `usgs`, `uri` `.osn.mghpcc.org`). We measured three. The same 64 virtual chunks
+(530 MB) read, median of 3:
 
-| container | Source Cooperative | GCS (`gs://noaa-oar-gobai`) |
-|---|---|---|
-| `http_store()` (HTTP/1.1) | 1.1 s | 1.6 s |
-| `http_store(opts={"http1_only": "false"})` (HTTP/2) | 2.4 s | 3.0 s |
-| `s3_store(endpoint_url=..., anonymous=True, force_path_style=True)` (HTTP/2) | 2.3 s | 3.3 s |
-| `gcs_store()` (object_store, HTTP/1.1) | — | 1.7 s |
+| container | Source Cooperative | GCS | OSN (`udel1`) |
+|---|---|---|---|
+| `http_store()` (HTTP/1.1) | 1.1 s | 1.6 s | 1.7 s |
+| `http_store(opts={"http1_only": "false"})` (HTTP/2) | 2.4 s | 3.0 s | 11.3 s |
+| `s3_store(endpoint_url=..., anonymous=True, force_path_style=True)` (HTTP/2) | 2.3 s | 3.3 s | 11.7 s |
+| `gcs_store()` (object_store, HTTP/1.1) | — | 1.7 s | — |
 
+Sources: `gs://noaa-oar-gobai` (NOAA GOBAI) and `s3://coastalbench-data` (CoastalBench), both public NetCDF.
 Measured from AWS us-west-2; from Google Colab, `s3_store` on Source Cooperative was 3–5× slower than
-`http_store`. During the Source Cooperative reads, the HTTP/2 clients held about 6 connections and the HTTP/1.1 client about 69.
-Turning HTTP/2 on for `http_store` reproduces the slowdown, so the cause is HTTP/2, not the S3 API.
+`http_store`. During the Source Cooperative reads, the HTTP/2 clients held about 6 connections and the
+HTTP/1.1 client about 69. Turning HTTP/2 on for `http_store` reproduces the slowdown, so the cause is HTTP/2,
+not the S3 API.
 
 **This is a known problem:** `object_store` defaults to HTTP/1.1 for exactly this reason
 (`object_store` 0.14 `src/client/mod.rs`: "HTTP/2 is known to be significantly slower than HTTP/1, so we
 default to HTTP/1 for now"). See [apache/arrow-rs-object-store#104](https://github.com/apache/arrow-rs-object-store/issues/104):
 one HTTP/2 client stuck at ~250 MB/s whatever the concurrency, against ~1,280 MB/s over HTTP/1.1. It points to
-hyper's HTTP/2 client. Other clients are fine over HTTP/2 on the same endpoint: curl and GDAL read as fast as
-over HTTP/1.1.
+hyper's HTTP/2 client. Other clients do better over HTTP/2: on Source Cooperative curl and GDAL read as fast as
+over HTTP/1.1, and on OSN curl is 2.3× slower over HTTP/2 against 7× for the Rust clients.
 
 **Where in the code (v2.3.1):** `icechunk-s3/src/lib.rs` `mk_client` uses the SDK's default HTTP client;
 `aws-smithy-http-client` 1.5 offers ALPN `["h2", "http/1.1"]` (`src/client/tls/rustls_provider.rs:322`).
