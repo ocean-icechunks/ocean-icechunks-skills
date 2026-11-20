@@ -102,7 +102,21 @@ What a later session needs to know, beyond the diff:
 - Left alone on purpose: the wrong `to_icechunk(encoding=…)` snippets (#13, still open) and the
   `chunks={}`/`_FillValue` lessons (#14).
 
+## s3:// vs https:// references: investigated (#27, 2026-11-19..20)
+
+Branch `s3-vs-https-investigation` (pushed, no PR yet); everything is in
+[docs/design/s3-vs-https/README.md](../docs/design/s3-vs-https/README.md). In one line: `s3_store` is
+2–7× slower than `http_store` on endpoints that offer HTTP/2 (Source Coop, GCS, OSN) because the Rust AWS
+SDK negotiates HTTP/2 and hyper's HTTP/2 is slow; filed as earth-mover/icechunk#2571. Decisions (Eli):
+it is an Icechunk issue, nothing goes to Source Coop; keep the test stores in
+`ocean-icechunks/test-repo/s3-vs-https/`. The skill's "prefer HTTPS" lines are untouched on purpose until
+#2571 is answered (Arraylake forbids `https://` virtual prefixes, which pulls the other way).
+
 ## Open threads
+
+- **s3:// vs https:// in the skill, #27**: decide the skill rule once earth-mover/icechunk#2571 has an answer,
+  then PR the branch (README + scripts + results) and update `references/source-patterns.md` and
+  `learn-and-evolve.md`. The design note is the folder README; there is no separate note yet.
 
 - **Standardized READMEs, #21** (opened 2026-11-19, not started): the product and store
   READMEs on Source Coop are generated from a source file (YAML by default) plus a render
