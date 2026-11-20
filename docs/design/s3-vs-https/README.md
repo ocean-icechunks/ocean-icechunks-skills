@@ -13,6 +13,7 @@ Provisional: these are the inputs to a design note that is not written yet.
 - `bench.py`: reads both stores anonymously and times the same reads. No credentials needed.
 - `s3_vs_https_read_test.ipynb`: the same test as a self-contained notebook for Colab or a laptop.
 - `hub-us-west-2.json`: raw timings from the JupyterHub (AWS us-west-2), 2026-11-20.
+- `colab.json`: raw timings from Google Colab, 2026-11-20.
 
 Each chunk is one whole time step of one variable (36 x 195 x 295 float32, uncompressed, ~8.3 MB),
 so the point series, surface and full-variable reads each fetch all 64 chunks (~530 MB).
