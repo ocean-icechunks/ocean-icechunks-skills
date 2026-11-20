@@ -21,7 +21,7 @@ GCS (`storage.googleapis.com`). We measured two of them. The same 64 virtual chu
 | `gcs_store()` (object_store, HTTP/1.1) | — | 1.7 s |
 
 Measured from AWS us-west-2; from Google Colab, `s3_store` on Source Cooperative was 3–5× slower than
-`http_store`. During the reads, the HTTP/2 clients held about 6 connections and the HTTP/1.1 client about 69.
+`http_store`. During the Source Cooperative reads, the HTTP/2 clients held about 6 connections and the HTTP/1.1 client about 69.
 Turning HTTP/2 on for `http_store` reproduces the slowdown, so the cause is HTTP/2, not the S3 API.
 
 **This is a known problem:** `object_store` defaults to HTTP/1.1 for exactly this reason
