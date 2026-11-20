@@ -1,5 +1,5 @@
-<!-- DRAFT for source-cooperative/data.source.coop. Not posted. Review before filing.
-     Simplest ask first (turn off HTTP/2); other options at the end. The slow path looks client-side (Rust hyper/h2). -->
+<!-- NOT FILED. Decision (Eli, 2026-11-20): this is an Icechunk issue (earth-mover/icechunk#2571);
+     nothing goes to Source Cooperative. Kept as a record of the evidence. -->
 
 # Reading through the S3 API is 2–5× slower than plain HTTPS on data.source.coop, because it offers HTTP/2
 

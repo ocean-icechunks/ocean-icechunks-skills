@@ -1,4 +1,4 @@
-<!-- DRAFT for earth-mover/icechunk. Not posted. Review before filing. -->
+<!-- FILED as earth-mover/icechunk#2571 (2026-11-20). Kept as the record of what was posted. -->
 
 # `s3_store` reads are 2–7× slower than `http_store` on endpoints that offer HTTP/2
 
