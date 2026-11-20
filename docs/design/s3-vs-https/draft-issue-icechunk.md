@@ -10,6 +10,11 @@ server offers it. `http_store` uses `object_store`, which stays on HTTP/1.1. So 
 HTTP/2, expect `s3_store` to read the same bytes more slowly than `http_store`. On endpoints that offer only
 HTTP/1.1 (AWS S3, Tigris, Wasabi, CloudFerro) both clients use HTTP/1.1 and read equally fast.
 
+**Why this matters for Arraylake:** Arraylake forbids `http://` and `https://` virtual chunk container prefixes
+([docs](https://docs.earthmover.io/guide/virtual-datasets)), so a virtual store we want to publish in Arraylake
+has to reference its files as `s3://...`. Switching our stores' references from `https://` to `s3://` is easy,
+but on HTTP/2 endpoints it would make reads 2–7× slower.
+
 Endpoints we found offering HTTP/2: Source Cooperative (`data.source.coop`), GCS (`storage.googleapis.com`)
 and OSN pods (`udel1`, `usgs`, `uri` `.osn.mghpcc.org`). We measured three. The same 64 virtual chunks
 (530 MB) read, median of 3:
