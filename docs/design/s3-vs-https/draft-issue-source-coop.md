@@ -1,22 +1,21 @@
 <!-- DRAFT for source-cooperative/data.source.coop. Not posted. Review before filing.
-     Opening states the problem and the ask; the slow path looks client-side (Rust hyper/h2). -->
+     Simplest ask first (turn off HTTP/2); other options at the end. The slow path looks client-side (Rust hyper/h2). -->
 
 # Reading through the S3 API is 2–5× slower than plain HTTPS on data.source.coop, because it offers HTTP/2
 
-**In short:** we read NetCDF files on Source Cooperative through Icechunk virtual stores. The same bytes read
+**Ask:** could `data.source.coop` stop offering HTTP/2, so that clients connect over HTTP/1.1, as they do
+with AWS S3? That alone would remove the slowdown below for every affected client, with no change on the
+client side. Browsers and other clients fall back to HTTP/1.1 without trouble. Other options are at the end.
+
+**Why:** we read NetCDF files on Source Cooperative through Icechunk virtual stores. The same bytes read
 2–5× slower when the store references them as `s3://ocean-icechunks/...` (S3 API, endpoint `data.source.coop`)
 than as `https://data.source.coop/ocean-icechunks/...`. The cause is HTTP/2: `data.source.coop` offers it,
 Icechunk's S3 client (the Rust AWS SDK) accepts it, and the Rust HTTP/2 client is slow for many parallel range
-reads. Icechunk's HTTPS client stays on HTTP/1.1. On the other S3-compatible endpoints we tested (AWS S3, CloudFerro),
-which offer only HTTP/1.1, `s3://` and `https://` read at the same speed.
+reads. Icechunk's HTTPS client stays on HTTP/1.1. On the other S3-compatible endpoints we tested (AWS S3,
+CloudFerro), which offer only HTTP/1.1, `s3://` and `https://` read at the same speed.
 
-**The ask:** the slow part appears to be on the client side (curl over HTTP/2 is fast here), and we are
-reporting it to Icechunk. But Source Cooperative is the only S3 endpoint we have found where clients hit it, so we
-would like to know:
-
-1. Is offering HTTP/2 to S3-API clients intentional, and does it help anyone?
-2. Would you consider serving S3-API access over HTTP/1.1 only (or on a separate hostname), as AWS S3 does?
-3. If not, could the docs say that S3 clients built on the Rust AWS SDK may read faster over HTTP/1.1?
+The slow part appears to be on the client side (curl over HTTP/2 is fast here), and we are reporting it to
+Icechunk as well. But Source Cooperative is the only S3 endpoint we have found where clients hit it.
 
 ## What we see
 
@@ -149,10 +148,16 @@ the Rust hyper/h2 client, which has a known HTTP/2 throughput problem
 
 From Google Colab the gap for the Icechunk case was larger (3–5×), so it may grow with distance to the edge.
 
-## One more question
+## Other options, if turning off HTTP/2 is not practical
 
-Is there any per-connection or per-stream limit in the Worker or the Cloudflare front end that could cap HTTP/2
-throughput, for example concurrent streams per connection, or how response bodies are streamed back through
-the Worker? curl's HTTP/2 client is fast here, so we expect the answer is no, but we would rather ask than assume.
+1. Offer an HTTP/1.1-only hostname for S3-API access. Clients that point their S3 endpoint at it would
+   read at full speed. This needs a configuration change on the client side.
+2. Say in the docs that S3 clients built on the Rust AWS SDK (Icechunk's `s3_store`, for example) may read
+   2–5× faster over HTTP/1.1, and that `https://data.source.coop/...` URLs avoid the problem for Icechunk today.
+
+We would also like to know whether offering HTTP/2 to S3-API clients is intentional, and whether any
+per-connection or per-stream limit in the Worker or the Cloudflare front end could cap HTTP/2 throughput (for
+example concurrent streams per connection, or how response bodies are streamed back through the Worker). curl's
+HTTP/2 client is fast here, so we expect not, but we would rather ask than assume.
 
 Related: ocean-icechunks/ocean-icechunks-skills#27 (investigation), ocean-icechunks/pacioos#40.
