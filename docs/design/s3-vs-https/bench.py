@@ -1,0 +1,113 @@
+"""Read the H (https://) and S (s3://) test stores anonymously and time the same reads.
+
+Usage: python bench.py [--repeats N] [--label NAME]
+Needs only icechunk, xarray, zarr, numpy. No credentials.
+"""
+import argparse
+import json
+import platform
+import socket
+import statistics
+import time
+import warnings
+
+warnings.simplefilter("ignore")
+
+import icechunk
+import numpy as np
+import xarray as xr
+import zarr
+
+BASE = "https://data.source.coop/ocean-icechunks/test-repo/s3-vs-https/roms_reanalysis_8day"
+
+
+def authorize(repo):
+    """Anonymous access for every container the store names, by its type."""
+    auth = {}
+    for prefix, c in (repo.config.virtual_chunk_containers or {}).items():
+        if prefix.startswith("s3://"):
+            auth[prefix] = icechunk.credentials.s3_anonymous_credentials()
+        elif prefix.startswith(("http://", "https://")):
+            auth[prefix] = icechunk.credentials.HttpAccess
+        else:
+            raise ValueError(f"no anonymous rule for {prefix}")
+    return repo.reopen(authorize_virtual_chunk_access=icechunk.containers_credentials(auth))
+
+
+def open_ds(kind):
+    repo = authorize(icechunk.Repository.open(icechunk.http_storage(f"{BASE}/{kind}")))
+    return xr.open_zarr(repo.readonly_session("main").store, consolidated=False, chunks=None)
+
+
+def pick_var(ds, prefer="temp"):
+    """`prefer` if present, else the largest variable with time (ties broken by name),
+    so both stores always read the same variable."""
+    if prefer in ds.data_vars:
+        return prefer
+    cands = sorted(v for v in ds.data_vars if "time" in ds[v].dims)
+    return max(cands, key=lambda v: (ds[v].ndim, ds[v].size))
+
+
+def cases(ds, var):
+    a = ds[var]
+    mid = {d: a.sizes[d] // 2 for d in a.dims if d != "time"}
+    surf = {"depth": 0} if "depth" in a.dims else {}
+    return {
+        "one_slice": lambda: a.isel(time=0, **surf).values,
+        "point_series": lambda: a.isel(**mid).values,
+        "surface_all_times": lambda: a.isel(**surf).values,
+        "full_variable": lambda: a.values,
+    }
+
+
+def timed(fn):
+    t0 = time.perf_counter()
+    out = fn()
+    return time.perf_counter() - t0, out
+
+
+def run(repeats=3, label=None, kinds=("H", "S")):
+    zarr.config.set({"async.concurrency": 64})
+    results = {"label": label or socket.gethostname(), "python": platform.python_version(),
+               "icechunk": icechunk.__version__, "repeats": repeats, "times": {}}
+    checks = {}
+    # Alternate H and S each round so slow network moments hit both alike.
+    for r in range(repeats):
+        for kind in kinds:
+            dt, ds = timed(lambda: open_ds(kind))
+            results["times"].setdefault(kind, {}).setdefault("open", []).append(dt)
+            var = pick_var(ds)
+            for name, fn in cases(ds, var).items():
+                dt, arr = timed(fn)
+                results["times"][kind].setdefault(name, []).append(dt)
+                if r == 0:
+                    checks.setdefault(name, {})[kind] = (float(np.nansum(arr)), arr.shape)
+    results["variable"] = var
+    results["same_values"] = all(len({str(v) for v in c.values()}) == 1 for c in checks.values())
+    return results
+
+
+def report(results):
+    print(f"{results['label']}: icechunk {results['icechunk']}, variable {results['variable']}, "
+          f"{results['repeats']} repeats; H and S values identical: {results['same_values']}")
+    t = results["times"]
+    print(f"{'read':20s} {'H https (s)':>22s} {'S s3 (s)':>22s} {'S/H':>6s}")
+    for name in t["H"]:
+        h, s = t["H"][name], t["S"][name]
+        fmt = lambda x: f"{statistics.median(x):6.2f} [{min(x):.2f}-{max(x):.2f}]"
+        print(f"{name:20s} {fmt(h):>22s} {fmt(s):>22s} "
+              f"{statistics.median(s) / statistics.median(h):6.2f}")
+    print("median [min-max]; first round is cold, later rounds may be warmer at the server/CDN")
+
+
+if __name__ == "__main__":
+    p = argparse.ArgumentParser()
+    p.add_argument("--repeats", type=int, default=3)
+    p.add_argument("--label")
+    p.add_argument("--json")
+    a = p.parse_args()
+    res = run(a.repeats, a.label)
+    report(res)
+    if a.json:
+        with open(a.json, "w") as f:
+            json.dump(res, f, indent=1)
