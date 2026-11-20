@@ -6,22 +6,23 @@
 users a way to force it.
 
 **Why it matters:** `s3_store` uses the AWS SDK's default HTTP client, which negotiates HTTP/2 whenever the
-server offers it. `http_store` uses `object_store`, which stays on HTTP/1.1. So on any S3 endpoint that offers
+server offers it. `http_store` uses `object_store`, which stays on HTTP/1.1. So on any endpoint that offers
 HTTP/2, expect `s3_store` to read the same bytes more slowly than `http_store`. On endpoints that offer only
 HTTP/1.1 (AWS S3, Tigris, Wasabi, CloudFerro) both clients use HTTP/1.1 and read equally fast.
 
 Endpoints we found offering HTTP/2: Source Cooperative (`data.source.coop`), OSN (`uri.osn.mghpcc.org`) and
-GCS's S3 interface (`storage.googleapis.com`). We measured the slowdown on Source Cooperative only; there the
-same 64 virtual chunks (530 MB) read:
+GCS (`storage.googleapis.com`). We measured two of them. The same 64 virtual chunks (530 MB) read, median of 3:
 
-| container | median | peak connections |
+| container | Source Cooperative | GCS (`gs://noaa-oar-gobai`) |
 |---|---|---|
-| `http_store()` (HTTP/1.1) | 1.1 s | 69 |
-| `http_store(opts={"http1_only": "false"})` (HTTP/2) | 2.4 s | 6 |
-| `s3_store(endpoint_url="https://data.source.coop", ...)` (HTTP/2) | 2.3 s | 6 |
+| `http_store()` (HTTP/1.1) | 1.1 s | 1.6 s |
+| `http_store(opts={"http1_only": "false"})` (HTTP/2) | 2.4 s | 3.0 s |
+| `s3_store(endpoint_url=..., anonymous=True, force_path_style=True)` (HTTP/2) | 2.3 s | 3.3 s |
+| `gcs_store()` (object_store, HTTP/1.1) | — | 1.7 s |
 
-Measured from AWS us-west-2; from Google Colab `s3_store` was 3–5× slower than `http_store`. Turning HTTP/2 on
-for `http_store` reproduces the slowdown, so the cause is HTTP/2, not the S3 API.
+Measured from AWS us-west-2; from Google Colab, `s3_store` on Source Cooperative was 3–5× slower than
+`http_store`. During the reads, the HTTP/2 clients held about 6 connections and the HTTP/1.1 client about 69.
+Turning HTTP/2 on for `http_store` reproduces the slowdown, so the cause is HTTP/2, not the S3 API.
 
 **This is a known problem:** `object_store` defaults to HTTP/1.1 for exactly this reason
 (`object_store` 0.14 `src/client/mod.rs`: "HTTP/2 is known to be significantly slower than HTTP/1, so we
