@@ -162,5 +162,7 @@ https  http_store(http1_only=false)             2.19     1.87     242       0
 s3     s3_store(endpoint data.source.coop)      2.52     2.01     210       0
 ```
 
-Context: ocean-icechunks/pacioos#40 (a suggestion to switch PacIOOS references from `https://` to `s3://`)
-and the investigation in ocean-icechunks/ocean-icechunks-skills#27.
+Related: #1431 suggests building the S3 client with a custom `aws_smithy_http_client::Builder` in `mk_client`
+(there, to tune the connection pool); that is also where an HTTP/1.1 setting would go. We found no existing issue
+or discussion about HTTP/2. Context: ocean-icechunks/pacioos#40 (a suggestion to switch PacIOOS references from
+`https://` to `s3://`) and the investigation in ocean-icechunks/ocean-icechunks-skills#27.
