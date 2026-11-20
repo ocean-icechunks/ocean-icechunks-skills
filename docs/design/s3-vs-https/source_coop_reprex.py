@@ -10,8 +10,8 @@ No credentials, no Icechunk. Uses obstore (Python bindings to Rust object_store)
   plain GET (HTTPStore on https://data.source.coop/<account>/)                 x  HTTP/1.1 | HTTP/2
 
 object_store uses HTTP/1.1 by default; `http2_only` switches the same client to HTTP/2. Prints the
-Cloudflare edge (colo), the protocol it negotiated and the TCP connect time (a rough round-trip
-time), from https://data.source.coop/cdn-cgi/trace. The client's IP address is not printed.
+Cloudflare edge (colo, from https://data.source.coop/cdn-cgi/trace) and a TCP connect time
+(a rough round-trip time). The client's IP address is not printed.
 """
 import argparse
 import asyncio
@@ -31,7 +31,7 @@ RANGE = 1_656_720
 
 
 def edge():
-    """colo and http version from Cloudflare's trace endpoint, plus a TCP connect time."""
+    """Cloudflare colo and country from the trace endpoint, plus a TCP connect time."""
     import socket
     with urllib.request.urlopen(f"{ENDPOINT}/cdn-cgi/trace", timeout=30) as r:
         kv = dict(line.split("=", 1) for line in r.read().decode().splitlines() if "=" in line)
