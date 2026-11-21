@@ -27,6 +27,9 @@ coordinate_notes:
   forecast_reference_time: the run each step comes from (NaT if no run covers it)
   forecast_period: hours since that run's start, 0 to 168
   depth: 0.25 to 5,500 m, positive down
+order:
+  variables: [temp, salt, u, v, zeta, mask]
+  coordinates: [time, forecast_reference_time, forecast_period, depth, lat, lon]
 variable_notes:
   mask: land/sea mask from the files (0 land, 1 water)
 code:

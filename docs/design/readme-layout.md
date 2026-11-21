@@ -170,7 +170,7 @@ the collection tables need.
 
 ## Open
 
-- Slice 3: write the `auto/` JSON from the store (anonymous reads only). See "Slice 3 plan" below.
+- Slice 3 is built; see "Slice 3 (built 2026-11-21)" below. Slice 4 is not planned yet.
 - The hand-written source text (e.g. roms_hiig "Source files": 657 runs to 2026-11-17) and the
   frozen file counts are already stale. Eli: refresh them when this work is finished and the new
   READMEs are posted, not before.
@@ -178,7 +178,7 @@ the collection tables need.
 - The other PacIOOS products and `noaa-ohc` have not been marked up; expect small additions
   (e.g. `ww3_hawaii`'s "Steps to treat with care").
 
-## Slice 3 plan (agreed with Eli, 2026-11-21; not started)
+## Slice 3 plan (agreed with Eli, 2026-11-21)
 
 - A separate script, `collect_auto.py`, reads each store and its source-file prefix and writes the
   `<product id>.json` that `render_readme.py --auto` takes. The render script stays offline, so its
@@ -192,3 +192,40 @@ the collection tables need.
 - Tests run against the live PacIOOS stores and check structure, not exact dates (the stores update
   daily). Run the whole eval in a clean venv (`/srv/conda/bin/python3.12 -m venv`); it was never
   run for slice 2 (permission check refused it) and Eli folded it into slice 3.
+
+## Slice 3 (built 2026-11-21)
+
+`scripts/collect_auto.py` follows the plan. Evidence from the four live PacIOOS stores:
+
+- **Listing needs no package.** `https://data.source.coop/<account>?list-type=2&prefix=...` answers
+  a plain S3 ListObjectsV2 request anonymously. Only `.nc`/`.h5`-type keys are counted, so the
+  `.md5` sidecars beside each file are left out.
+- **The store cannot say where its files are.** All four stores have a single virtual chunk
+  container, `https://data.source.coop/ocean-icechunks/pacioos/`, the whole collection. So the
+  source prefix is the product's `netcdf_url`; the three partial PacIOOS sources gained one.
+- **Source formats differ within a collection.** `roms_hiig` and `ww3_hawaii` files are NetCDF-3
+  classic (`CDF\x01`); `wrf_hi` and the reanalysis are NetCDF-4/HDF5. h5py alone could not read the
+  `roms_hiig` attributes, so the script parses NetCDF-3 headers itself over range requests (a few
+  kB) and uses h5py only for HDF5. NetCDF-4 internal attributes (`_NCProperties`, ...) are dropped,
+  as xarray does.
+- **xarray drops a global `coordinates` attribute** (it moves into encoding). Store attributes are
+  read with zarr, so `docs/metadata.md` keeps it, as the hand-made file has.
+- **Standard name cell:** `standard_name`, else `variable_notes`, else `long_name`. The script writes
+  `long_name` separately so a person's note still wins over the file's (e.g. `mask`, whose long name
+  is "field mask").
+- **Variable order** is not stable in the store, so variables are sorted by rank, then name, and other
+  coordinates follow their dimension by name. Rendered from live values, roms_hiig's README differs
+  from the hand-made one only in that order (`salt` before `temp`, `forecast_period` before
+  `forecast_reference_time`) and in values that moved since the fixture was frozen (file counts, the
+  newest NetCDF file). Eli asked for an optional `order` field (`order.variables`,
+  `order.coordinates`); a listed name the store lacks fails the render, so a typo cannot hide.
+- **Source formats in documentation.md** (Eli, 2026-11-21: "add source formats information if it
+  is not already there"). Checking every header costs a request per file, so the collector reads
+  the first 8 bytes of the first and last file in each folder (4 to 32 requests for PacIOOS) and
+  says so on the page. A provider that changes format usually does it between years or versions,
+  which the folder ends catch; a change inside a folder would be missed. The section goes after
+  "A virtual store" unless the source has its own `## Source file format` section.
+- **Timing:** all four stores and listings in about 11 s on the hub.
+- **Clean run:** a venv from `$NB_PYTHON_PREFIX/bin/python` (3.13 on this hub) with only
+  `evals/icechunk-readme/requirements.txt`: `test_render.py` 14/14, `test_collect.py` 8/8.
+

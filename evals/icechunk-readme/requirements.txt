@@ -1,3 +1,12 @@
-# For evals/icechunk-readme/test_render.py and skills/icechunk-readme/scripts/render_readme.py.
+# For evals/icechunk-readme/test_render.py, test_collect.py and the two scripts in
+# skills/icechunk-readme/scripts/.
 # PyYAML parses the YAML front matter of the source files (https://pypi.org/project/PyYAML/).
 PyYAML>=6.0
+# collect_auto.py only: read the store. The same packages the README's Python code needs.
+# https://pypi.org/project/icechunk/ https://pypi.org/project/xarray/ https://pypi.org/project/zarr/
+icechunk>=2.3
+xarray
+zarr>=3
+# collect_auto.py only: global attributes of a NetCDF-4/HDF5 file, when metadata.netcdf_attributes
+# is set (NetCDF-3 headers need nothing extra). https://pypi.org/project/h5py/
+h5py>=3

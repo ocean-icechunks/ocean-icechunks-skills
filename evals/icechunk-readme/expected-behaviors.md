@@ -21,3 +21,11 @@
 - Writes both levels (collection and product) even though there is one store.
 - Does not invent performance timings or tested versions; asks for them or
   measures them.
+
+## Scenario 4
+
+- Reruns `collect_auto.py` and then `render_readme.py`, into a scratch directory;
+  does not edit the `auto/` JSON or the rendered README by hand.
+- Reads the store anonymously and writes nothing to the store or the bucket.
+- Shows what changed (snapshot, last update, time coverage, file counts) and asks
+  before replacing the published README.

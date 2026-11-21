@@ -6,7 +6,7 @@
 # Each field says:
 #   required  true | false | "if <condition>"
 #   source    person   written in the source file
-#             auto     filled by the render script from the store or the bucket;
+#             auto     read from the store or the bucket by collect_auto.py;
 #                      never written by hand, so it cannot drift from the store
 #             inherit  taken from the collection source file unless the product sets it
 #   used_in   where the value appears: README, documentation (docs/documentation.md),
@@ -53,7 +53,7 @@ collection:
   auto:
     product_time_range: {from: "each store's time coordinate, first and last value (dates); the Time coverage column", used_in: [README]}
     product_last_update: {from: "time of the snapshot each store's main branch points at; 'Updated' under Icechunk in the Data cell", used_in: [README]}
-    product_source_files: {from: "anonymous listing of each product's source-file prefix: format (from the extension, e.g. netcdf), path, file count and total size; also the Data files link in Data access", used_in: [README]}
+    product_source_files: {from: "anonymous listing of each product's source-file prefix (its netcdf_url): format (from the extension, e.g. netcdf), path, file count and total size; also the Data files link in Data access", used_in: [README]}
     as_of:            {from: "render date and each store's last snapshot time", used_in: [documentation]}
 
 product:
@@ -67,7 +67,7 @@ product:
                        fields: {name: "e.g. ROMS ocean forecast", detail: "e.g. daily runs; 3-hourly, ~4 km, 36 depths",
                                 short_name: "e.g. ROMS forecast, best time series", store_note: "e.g. best time series"}}
     store_url:        {required: true,  source: person, used_in: [README], description: "Public HTTPS URL of the Icechunk store."}
-    netcdf_url:       {required: false, source: person, used_in: [documentation], description: "Public prefix of the NetCDF copies the store references."}
+    netcdf_url:       {required: false, source: person, used_in: [documentation], description: "Public prefix of the NetCDF copies the store references; collect_auto.py lists it for source_files and netcdf_attributes. Needed for the collection's Data column."}
     provider_page:    {required: false, source: person, used_in: [README], fields: {label: "e.g. PacIOOS dataset page", url: ""}}
     viewer:           {required: "if the collection has a viewer", source: person, used_in: [README, documentation, collection],
                        description: "Opening view; the link is built from the collection viewer URL, store_url and these.",
@@ -77,6 +77,9 @@ product:
                        description: "Why the store is split into groups, so nobody 'fixes' the split."}
     coordinate_notes: {required: false, source: person, used_in: [README],
                        description: "Map of coordinate name to a plain-language Values cell, replacing the auto range, e.g. time: '2025-01-01T00Z to 7 days after the newest run, every 3 hours'."}
+    order:            {required: false, source: person, used_in: [README],
+                       description: "Row order of the Variables and Coordinates tables, which the store does not keep. Names listed come first, in this order; the rest follow by rank, then name. A name the store lacks fails the render.",
+                       fields: {variables: "e.g. [temp, salt, u, v, zeta, mask]", coordinates: "e.g. [time, forecast_reference_time, forecast_period, depth, lat, lon]"}}
     variable_notes:   {required: false, source: person, used_in: [README],
                        description: "Map of variable name to text for the Standard name cell when it has none, e.g. mask."}
     code:             {required: true,  source: person, used_in: [README],
@@ -118,12 +121,13 @@ product:
       "## Example analyses": {required: true,  description: "One code block per language, run against the store, each step with a comment. One example subsets and then calls .chunk(); code.python.dask_example points to it."}
       "## Source files":     {required: true,  description: "One paragraph: what the files are, how they were copied, coverage and gaps."}
       "## Caveats":          {required: false, description: "Known gaps or anything unverified a reader must see in the README."}
-    "# Documentation":       {required: true,  description: "Free sections in order, rendered to docs/documentation.md. The placeholder {{viewer_fields_table}} is replaced by the per-variable viewer table built from viewer.fields. Recommended headings: A virtual store; What the store adds over the files; The viewer; Where the metadata came from; The time axis; Opening the store: notes; Performance: why reads cost what they do; How the store was built and validated; Updates. 'A virtual store' is required."}
+    "# Documentation":       {required: true,  description: "Free sections in order, rendered to docs/documentation.md. The placeholder {{viewer_fields_table}} is replaced by the per-variable viewer table built from viewer.fields. A 'Source file format' section is generated from source_files.formats and placed after 'A virtual store', or at {{source_formats}}; a hand-written '## Source file format' section replaces it. Recommended headings: A virtual store; What the store adds over the files; The viewer; Where the metadata came from; The time axis; Opening the store: notes; Performance: why reads cost what they do; How the store was built and validated; Updates. 'A virtual store' is required."}
   auto:
-    variables:        {from: "store: every data variable per group, with dims, units, standard_name (long_name if absent)", used_in: [README]}
+    variables:        {from: "store: every data variable per group, with dims, units, standard_name and long_name; the Standard name cell shows standard_name, else variable_notes, else long_name", used_in: [README]}
     coordinates:      {from: "store: name, size, first to last value with units", used_in: [README]}
     groups:           {from: "store: group tree; one-group stores show no group line", used_in: [README]}
     snapshot:         {from: "store: the snapshot main points at, and its time", used_in: [README, metadata]}
     last_update:      {from: "store: time of that snapshot; shown under the store URL and in Provenance", used_in: [README, collection]}
     store_attributes: {from: "store: root group attributes", used_in: [metadata]}
+    source_files:     {from: "anonymous listing of netcdf_url: format, path, files, size; formats (each format found, with files checked and first and last file) and formats_sampled (which files were checked)", used_in: [collection, documentation]}
     netcdf_attributes: {from: "latest NetCDF copy, when metadata.netcdf_attributes is true: {file, url, selected_by, attributes}", used_in: [metadata]}

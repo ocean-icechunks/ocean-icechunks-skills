@@ -340,8 +340,26 @@ def python_section(p, examples):
         subset, "**Example analyses**", examples] if x)
 
 
+def ordered(items, names):
+    """Items named in `names` first, in that order; the rest after, in the store values' order."""
+    rank = {n: i for i, n in enumerate(names or [])}
+    return sorted(items, key=lambda x: rank.get(x["name"], len(rank)))
+
+
+def order_errors(p, auto, where):
+    """Names in the source's `order` that the store does not have (a typo would be silently ignored)."""
+    errors = []
+    for kind in ("variables", "coordinates"):
+        have = {x["name"] for group in (auto.get(kind) or {}).values() for x in group}
+        for name in ((p.get("order") or {}).get(kind) or []):
+            if name not in have:
+                errors.append(f"{where}: order.{kind} names '{name}', which the store does not have")
+    return errors
+
+
 def variables_section(p, auto, readme):
     groups = auto.get("groups") or ["/"]
+    order = p.get("order") or {}
     notes, cnotes = p.get("variable_notes") or {}, p.get("coordinate_notes") or {}
     blocks = ["## Variables and coordinates"]
     if len(groups) > 1:
@@ -351,14 +369,58 @@ def variables_section(p, auto, readme):
             blocks.append(f"### Group `{group}`")
         blocks.append(table(["Variable", "Dimensions", "Units", "Standard name"], [
             [f"`{v['name']}`", ", ".join(v["dims"]), v.get("units", ""),
-             v.get("standard_name") or notes.get(v["name"], "")] for v in auto["variables"][group]]))
+             v.get("standard_name") or notes.get(v["name"]) or v.get("long_name", "")]
+            for v in ordered(auto["variables"][group], order.get("variables"))]))
         coords = []
-        for c in auto["coordinates"][group]:
+        for c in ordered(auto["coordinates"][group], order.get("coordinates")):
             size = f"on `{c['on']}`" if c.get("on") else f"{c['size']:,}" + (f" ({c['as_of']})" if c.get("as_of") else "")
             coords.append([f"`{c['name']}`", size, cnotes.get(c["name"]) or c.get("values", "")])
         blocks.append(table(["Coordinate", "Size", "Values"], coords))
     blocks.append(readme.get("Variable notes", ""))
     return "\n\n".join(b for b in blocks if b)
+
+
+FORMAT_NOTES = {
+    "NetCDF-3": "NetCDF-3 files are uncompressed and have no internal chunks: each variable is one "
+                "contiguous block or, along the record (unlimited) dimension, one block per record "
+                "interleaved with the other record variables.",
+    "NetCDF-4": "NetCDF-4 files are HDF5 files. Their variables may be chunked and compressed; a "
+                "compressed chunk can only be read whole, so the files' chunking sets the smallest read.",
+}
+
+
+def source_formats_section(auto):
+    """Format of the source files, from collect_auto.py's sample of file headers."""
+    sf = auto.get("source_files") or {}
+    formats = sf.get("formats")
+    if not formats:
+        return ""
+    rows = [[f["format"], f"{f['files']:,}", f"`{f['first']}`", f"`{f['last']}`"] for f in formats]
+    notes = [text for prefix, text in FORMAT_NOTES.items() if any(f["format"].startswith(prefix) for f in formats)]
+    if len(formats) > 1:
+        notes.insert(0, "**The files are not all in one format.** Code that opens them directly must handle each.")
+    return "\n\n".join(["## Source file format",
+                         table(["Format", "Files checked", "First", "Last"], rows),
+                         f"Read from the first bytes of the {sf['formats_sampled']}."] + notes)
+
+
+def with_source_formats(documentation, auto):
+    """Put the source-format section in documentation.md unless the source already has one.
+
+    {{source_formats}} places it; a '## Source file format' heading of the person's own keeps
+    theirs; otherwise it goes after 'A virtual store', which every product has.
+    """
+    section = source_formats_section(auto)
+    if "{{source_formats}}" in documentation:
+        return documentation.replace("{{source_formats}}", section)
+    if not section or re.search(r"^## Source file formats?\s*$", documentation, re.M):
+        return documentation
+    m = re.search(r"^## A virtual store\s*$", documentation, re.M)
+    nxt = re.search(r"^## ", documentation[m.end():], re.M) if m else None
+    if not nxt:
+        return documentation.rstrip() + "\n\n" + section
+    at = m.end() + nxt.start()
+    return documentation[:at] + section + "\n\n" + documentation[at:]
 
 
 def provenance_section(p, auto, readme, data_base):
@@ -418,6 +480,8 @@ def render_product(source, auto_dir, out):
     for field in ("snapshot", "last_update", "variables", "coordinates", "store_attributes"):
         if auto and blank(auto.get(field)):
             errors.append(f"{where}: store values for '{front.get('id')}' lack '{field}'")
+    if auto:
+        errors += order_errors(front, auto, where)
     if not str(front.get("store_url", "")).startswith("https://"):
         errors.append(f"{where}: store_url must be a public https:// URL for the built-in loader")
     if errors:
@@ -470,7 +534,7 @@ def render_product(source, auto_dir, out):
         f"# {short_title(p['title'])}: documentation",
         f"Technical detail for the [`{pid}` Icechunk store]({web}/{pid}). "
         "The README has what most readers need; this page has the rest.",
-        documentation.replace("{{viewer_fields_table}}", viewer_table)])
+        with_source_formats(documentation, auto).replace("{{viewer_fields_table}}", viewer_table)])
 
     nc = (auto.get("netcdf_attributes") or {}) if (p.get("metadata") or {}).get("netcdf_attributes") else {}
     note = ("_Generated from the store and the latest NetCDF copy on each update. " if nc

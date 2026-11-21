@@ -6,9 +6,8 @@ description: Write the README and documentation files for a published collection
 # Icechunk README: collection and product
 
 **Status: Experimental, in progress.** The layout was settled by hand on one
-collection (PacIOOS, Source Cooperative, November 2026). The render script works
-offline only: it does not yet read values from the store, so they are supplied
-as a JSON file per product (see "Render"). Say so when you use it.
+collection (PacIOOS, Source Cooperative, November 2026), and the scripts have
+been run only on its four stores. Say so when you use them.
 
 ## Two levels
 
@@ -60,26 +59,50 @@ Cooperative a link to a heading on another page needs the `user-content-`
 prefix (`README.md#user-content-python`). GitHub's `> [!NOTE]` alerts do not
 render on Source Cooperative.
 
-## Render
+## Collect, then render
 
-`scripts/render_readme.py` (Python 3.10+, PyYAML) turns a source file into the
-README and `docs/` files. It makes no network request and never writes to a
-store or bucket.
+Two scripts, run in this order. Their dependencies are listed in the eval's
+`requirements.txt`.
+
+`scripts/collect_auto.py` (PyYAML, `icechunk`, `xarray`, `zarr`; `h5py` for
+NetCDF-4 attributes) reads what the store knows and writes one
+`<product id>.json` per product. It reads anonymously over HTTPS only: the
+store's `main` branch, an S3 listing of the product's `netcdf_url`, and the
+header of the newest source file. It writes nothing except `--out`.
+
+```bash
+python3 scripts/collect_auto.py collection.md --out auto/     # every listed product
+python3 scripts/collect_auto.py <product>.md  --out auto/     # one product
+```
+
+- `source_files` and `netcdf_attributes` come from the product's `netcdf_url`.
+  The store cannot supply that prefix, because its virtual chunk container is
+  usually the whole collection. Without `netcdf_url` they are left out, and the
+  script says so.
+- The newest file is chosen by the date in its name, or by last-modified time
+  when a name has no date. NetCDF-3 headers are parsed directly; NetCDF-4 files
+  need `h5py`.
+- The format of the source files (NetCDF-3 classic, NetCDF-4/HDF5, ...) is read
+  from the first bytes of the first and last file in each folder, not every
+  file. The render puts it in `docs/documentation.md` after "A virtual store",
+  unless the source has its own `## Source file format` section or places it
+  with `{{source_formats}}`.
+- Variables are listed by rank, then name, because the store keeps no stable
+  order. Set `order` in the product source to choose the order.
+- The JSON is never edited by hand. Rerun the script instead.
+
+`scripts/render_readme.py` (Python 3.10+, PyYAML) turns a source file and that
+JSON into the README and `docs/` files. It makes no network request, so a README
+can be re-rendered without reading the stores again.
 
 ```bash
 python3 scripts/render_readme.py collection.md --auto auto/ --out <collection>/
 python3 scripts/render_readme.py <product>.md  --auto auto/ --out <collection>/<product>/
 ```
 
-- `--auto` is a directory of `<product id>.json` files with the values the store
-  knows: `time_range`, `source_files`, `groups`, `variables`, `coordinates`, `snapshot`,
-  `last_update`, `store_attributes`, `netcdf_attributes`. Until the script reads
-  them from the store, fill them from the store with xarray and Icechunk, never
-  from an old README.
 - A missing required field or section fails the render with exit status 1 and a
   list of every problem; nothing is written.
 - Rendering a collection reads each product's source file for its table row,
   so a product needs at least `row`, `store_url`, `viewer` and `code` before
   its full README is written.
 - Render into a scratch directory and compare before replacing a published file.
-

@@ -25,6 +25,9 @@ viewer:                      # required if the collection has a viewer
     -
 groups_note:                 # required if the store has more than one group: why it is split
 coordinate_notes:            # optional: name -> plain-language Values cell, replacing the auto range
+order:                       # optional: row order the store does not keep
+  variables:                 # e.g. [temp, salt, u, v, zeta, mask]
+  coordinates:               # e.g. [time, depth, lat, lon]
 variable_notes:              # optional: name -> text when a variable has no standard_name
 code:
   python:

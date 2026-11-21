@@ -11,6 +11,7 @@ page); everything else must match. Needs PyYAML; no network.
 import contextlib
 import importlib.util
 import io
+import json
 import pathlib
 import shutil
 import sys
@@ -125,6 +126,57 @@ class RenderPacIOOS(unittest.TestCase):
         status, err = run(HERE / "source/wrf_hi.md", "--auto", HERE / "auto", "--out", self.tmp / "out")
         self.assertEqual(status, 1)
         self.assertIn("missing required section '## Summary'", err)
+
+    def auto_copy(self, edit):
+        """Copy the auto/ fixtures, apply edit(dict) to roms_hiig.json; return the directory."""
+        auto = self.tmp / "auto"
+        shutil.copytree(HERE / "auto", auto)
+        path = auto / "roms_hiig.json"
+        values = json.loads(path.read_text(encoding="utf-8"))
+        edit(values)
+        path.write_text(json.dumps(values), encoding="utf-8")
+        return auto
+
+    def product_files(self, source, auto):
+        out = self.tmp / "out"
+        status, err = run(source, "--auto", auto, "--out", out)
+        self.assertEqual(status, 0, err)
+        return ((out / "README.md").read_text(encoding="utf-8"),
+                (out / "docs/documentation.md").read_text(encoding="utf-8"))
+
+    def test_order_overrides_store_order(self):
+        def shuffle(values):
+            values["variables"]["/"].reverse()
+            values["coordinates"]["/"].reverse()
+        auto = self.auto_copy(shuffle)
+        readme, _ = self.product_files(HERE / "source/roms_hiig.md", auto)
+        expected = (HERE / "expected/roms_hiig/README.md").read_text(encoding="utf-8")
+        self.assertEqual(unwrap(readme), unwrap(expected))
+
+    def test_order_names_unknown_variable(self):
+        path = self.edited("roms_hiig.md", "variables: [temp,", "variables: [tmep,")
+        status, err = run(path, "--auto", HERE / "auto", "--out", self.tmp / "out")
+        self.assertEqual(status, 1)
+        self.assertIn("order.variables names 'tmep'", err)
+
+    def test_source_format_section(self):
+        _, doc = self.product_files(HERE / "source/roms_hiig.md", HERE / "auto")
+        self.assertEqual(doc.count("## Source file format"), 1)
+        # A hand-written section of the same name replaces the generated one.
+        path = self.edited("roms_hiig.md", "## What the store adds over the files",
+                           "## Source file format\n\nHand-written.\n\n## What the store adds over the files")
+        _, doc = self.product_files(path, HERE / "auto")
+        self.assertEqual(doc.count("## Source file format"), 1)
+        self.assertIn("Hand-written.", doc)
+        self.assertNotIn("Files checked", doc)
+
+    def test_source_format_mixed(self):
+        def mixed(values):
+            f = values["source_files"]["formats"]
+            f.append({**f[0], "format": "NetCDF-4 (HDF5)"})
+        _, doc = self.product_files(HERE / "source/roms_hiig.md", self.auto_copy(mixed))
+        self.assertIn("not all in one format", doc)
+        self.assertIn("NetCDF-4 files are HDF5", doc)
 
     def test_blank_templates_fail_cleanly(self):
         for name in ("collection-template.md", "product-template.md"):

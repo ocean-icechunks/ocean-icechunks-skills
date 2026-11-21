@@ -8,7 +8,16 @@
   "format": "netcdf",
   "path": "ww3_hawaii/netcdf/",
   "files": 5237,
-  "size": "0.49 TB"
+  "size": "0.49 TB",
+  "formats": [
+   {
+    "format": "NetCDF-3 classic",
+    "files": 32,
+    "first": "ww3_hawaii/netcdf/2011/ww3hawaii_20110621.nc",
+    "last": "ww3_hawaii/netcdf/2026/ww3hawaii_20261120.nc"
+   }
+  ],
+  "formats_sampled": "first and last file in each of 16 folders, 32 of 5237 files"
  },
  "last_update": "2026-11-19"
 }

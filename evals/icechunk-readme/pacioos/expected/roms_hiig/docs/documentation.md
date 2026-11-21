@@ -9,6 +9,18 @@ The README has what most readers need; this page has the rest.
 Every data read goes to the daily NetCDF files, copied unchanged from PacIOOS to Source
 Cooperative at `https://data.source.coop/ocean-icechunks/pacioos/roms_hiig/netcdf/`.
 
+## Source file format
+
+| Format | Files checked | First | Last |
+|---|---|---|---|
+| NetCDF-3 classic | 4 | `roms_hiig/netcdf/2025/hiig_forec_20250101.nc` | `roms_hiig/netcdf/2026/hiig_forec_20261118.nc` |
+
+Read from the first bytes of the first and last file in each of 2 folders, 4 of 657 files.
+
+NetCDF-3 files are uncompressed and have no internal chunks: each variable is one contiguous
+block or, along the record (unlimited) dimension, one block per record interleaved with the other
+record variables.
+
 ## What the store adds over the files
 
 **One dataset** instead of hundreds of overlapping 1.9 GB files, the best-series rule already
