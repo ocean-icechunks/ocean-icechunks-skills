@@ -1,11 +1,11 @@
 # README layout for collections and products (#21)
 
-Status: **design settled by hand, 2026-11-21; template not yet built.** Part of #21.
+Status: **design settled by hand, 2026-11-21; schema and source templates in `skills/icechunk-readme/` (slice 1); render script not yet built.** Part of #21.
 
 Issue #21 planned templates first (phase 1) and designs after (phase 2). Eli reversed that: she
 printed two live PacIOOS READMEs, marked them up by hand, and the agent redrafted from the
 markup. The template is to be built from these layouts. The redrafted files are the worked
-examples in [`evals/virtual-icechunk/readme-examples/pacioos/`](../../evals/virtual-icechunk/readme-examples/pacioos/).
+examples in [`evals/icechunk-readme/pacioos/expected/`](../../evals/icechunk-readme/pacioos/expected/), with their source files in `source/`.
 
 ## Terms
 
@@ -89,9 +89,47 @@ concurrency comment shortened; the comment explaining virtual chunk access moved
   `XA93…`, while the store's `history` shows a 2026-11-19 update (snapshot `XDCV…`). Snapshot
   and last-update fields should be filled from the store.
 
+## Template decisions (Eli, 2026-11-21)
+
+- **Its own skill, `icechunk-readme`**, not part of `virtual-icechunk`: the collection/product
+  README is not specific to virtual stores.
+- **Markdown with YAML front matter** as the source format: structured fields in YAML, prose
+  under fixed `# README` / `# Documentation` headings.
+- **Collection/product** as the terms.
+- Built in slices: (1) schema and source files, (2) offline render reproducing the examples,
+  (3) auto-fill from the store, (4) skill text in `virtual-icechunk/references/project-docs.md`
+  points here.
+
+## Old checklist mapped to fields
+
+Every item of the README checklist in `skills/virtual-icechunk/references/project-docs.md`
+maps to a field in `skills/icechunk-readme/assets/schema.yaml`:
+
+| Checklist item | Field |
+|---|---|
+| That this is a virtual store, and who operates the source | product `# Documentation` → "A virtual store" (required); collection `provider` |
+| Exact public repository URL | `store_url` |
+| Groups, coverage, variables | auto: `groups`, `coordinates`, `variables` |
+| Known gaps or excluded files | `## Caveats` (README) or `## Source files`; collection "Known problems in the files" |
+| Why the groups exist | `groups_note` (required with more than one group) |
+| Source and destination authentication | `access.auth`; the Python section says "no credentials" when it is absent |
+| Compute-region or network restrictions | `access.region` |
+| Minimum and tested package versions | `code.python.python_version`, `packages`; `provenance.tested_with` |
+| A representative read, lazy-loading guidance | generated loader + `## Example analyses`; `code.python.chunks_advice` |
+| Source chunk limitations and observed performance, with the concurrency setting | `performance`; `code.python.concurrency`; documentation "Performance: why reads cost what they do" |
+| Provenance: build script, manifest, snapshot, update date | `provenance`; auto `snapshot`, `last_update` |
+| Anything unverified | `## Caveats` |
+
+Sections found in published READMEs but not on the checklist (probably added on request):
+the **global attributes** tables → generated `docs/metadata.md` (`metadata.netcdf_attributes` for
+the second table); **Latest completed NetCDF copy** → same; the **per-variable viewer table** →
+`viewer.fields`, shown in documentation; **Reading it fast** → `performance`. `ww3_hawaii`'s
+"Where the metadata came from" and "Steps to treat with care" are not yet mapped (product not
+marked up); the first fits a documentation section, the second probably `## Caveats`.
+
 ## Open
 
-- Build the template and render script against these examples (#21 phase 1 list still applies).
-- Pick one set of terms for the template and #21.
+- Render script (slice 2): reproduce `expected/` from `source/`. It needs source files for the other three PacIOOS products, at least their `row`, `store_url` and `viewer`, to render the collection tables.
+- The collection's "The Icechunk stores" section carries hand-written coverage dates; they go stale like the product snapshot did.
 - The other PacIOOS products and `noaa-ohc` have not been marked up; expect small additions
   (e.g. `ww3_hawaii`'s "Steps to treat with care").
