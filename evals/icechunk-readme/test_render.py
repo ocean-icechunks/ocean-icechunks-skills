@@ -226,6 +226,32 @@ class RenderPacIOOS(unittest.TestCase):
         self.assertIn("| climatology |", readme)
         self.assertIn("[netcdf](https://bucket.s3.amazonaws.com/data/)", readme)
 
+    def test_refused_source_files_need_access_auth(self):
+        def refused(values):
+            values["source_files"]["formats"] = [{**values["source_files"]["formats"][0],
+                                                  "format": "not readable anonymously (HTTP 403)"}]
+        auto = self.auto_copy(refused)
+        status, err = run(HERE / "source/roms_hiig.md", "--auto", auto, "--out", self.tmp / "out")
+        self.assertEqual(status, 1)
+        self.assertIn("set access.auth", err)
+        path = self.edited("roms_hiig.md", "performance:", "access:\n  auth: NASA Earthdata login.\nperformance:")
+        readme, doc = self.product_files(path, auto)
+        self.assertNotIn("No credentials", readme)
+        self.assertIn("refused an anonymous read", doc)
+
+    def test_reference_counts_and_index_dimensions(self):
+        def refs(values):
+            sf = values["source_files"]
+            del sf["size"]
+            sf["counted_from"] = "store references"
+            values["coordinates"]["/"].append({"name": "node", "size": 305705, "no_coordinate": True})
+        auto = self.auto_copy(refs)
+        readme, _ = self.product_files(HERE / "source/roms_hiig.md", auto)
+        self.assertIn("| `node` | 305,705 | index only (no coordinate variable) |", readme)
+        out = self.tmp / "coll"
+        self.assertEqual(run(HERE / "source/collection.md", "--auto", auto, "--out", out)[0], 0)
+        self.assertIn("`roms_hiig/netcdf/`, 657 files<br>", (out / "README.md").read_text(encoding="utf-8"))
+
     def test_blank_templates_fail_cleanly(self):
         for name in ("collection-template.md", "product-template.md"):
             with self.subTest(template=name):

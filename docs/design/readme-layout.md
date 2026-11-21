@@ -227,7 +227,7 @@ the collection tables need.
   "A virtual store" unless the source has its own `## Source file format` section.
 - **Timing:** all four stores and listings in about 11 s on the hub.
 - **Clean run:** a venv from `$NB_PYTHON_PREFIX/bin/python` (3.13 on this hub) with only
-  `evals/icechunk-readme/requirements.txt`: `test_render.py` 17/17, `test_collect.py` 12/12 (after the other-collections round).
+  `evals/icechunk-readme/requirements.txt`: `test_render.py` 19/19, `test_collect.py` 16/16 (after the more-stores round).
 
 ## Other collections (run 2026-11-21)
 
@@ -265,10 +265,44 @@ Open, for Eli:
 - **"Copies" wording.** "The code that copied the files", "the NetCDF copies" and "Latest completed
   NetCDF copy" are true only where the files were copied (PacIOOS). HYCOM, OHC, OISST and OA
   reference the provider's own files.
-- **Unlistable sources** (CoastWatch, NCEI): the store's own references could give the file count
-  (every virtual chunk location), at a cost not yet measured on a large store.
 - `coordinate_notes` is keyed by name across groups; OISST `time` means days in `daily`, months in
   `monthly`.
 - `netcdf_url` is also used for HDF5 sources; the name fits PacIOOS only.
 - OISST is built by NERACOOS/GMRI (ocean-icechunks/noaa_oisst); a README there may be another tool's.
+
+## More stores (run 2026-11-21)
+
+Eli: try more stores to make the skill robust; skip any that need a repository not on the hub. The
+repositories were found by walking both accounts' listings for `snapshots/` + `refs/` prefixes
+(`chla-z` has none within three levels; `globcolour/test` skipped). Tried: `necofs-waves`,
+`neracoos-necofs-casco`, `noaa-eccofs` (best, fmrc), `noaa-gomofs` (2-D, 3-D), `txla-roms`,
+`fish-pace/coastwatch/ocean-heat/na`, `fish-pace/globcolour` P1D, `fish-pace/pace-oci` CHL, KD, RRS.
+Their build repositories are not on the hub, so no `netcdf_url` was guessed; that led to the change
+below. All read anonymously; nothing was written.
+
+- **File counts from the store's references.** `session.all_virtual_chunk_locations()` lists every
+  referenced file on any host. Measured: necofs-waves 565 chunks in 6 s; noaa-ohc/na 19,293 chunks,
+  2,294 files, 17 s; txla 105,000 chunks, 10 s; roms_hiig 804,025 chunks, 5 s, ~400 MB; gomofs 2-D
+  223,018 chunks, 17,148 files, 26 s. Memory is ~0.4 GB per million chunks, so it is skipped above
+  `--max-refs` (3 million, from array shapes), for HYCOM (~10.6 M), ECCOFS (9 to 67 M), GlobColour (127 M)
+  and PACE RRS (52 M). A listing still supplies counts and sizes where `netcdf_url` is listable.
+  The references also caught a wrong guess: the trial OHC `netcdf_url` (`socd/lsa/heat-content/`) is
+  not where the store reads (`socd2/coastwatch/ocean_heat/`), and showed OHC mixes NetCDF-3 and
+  NetCDF-4 files across its eras.
+- **s3:// references to HTTPS** for the format sample: a Source Cooperative container
+  (`s3://ocean-icechunks/...`, endpoint `https://data.source.coop`, path-style) and an AWS one
+  (`s3://noaa-nos-ofs-pds/`, region only) map differently; both come from the container config.
+- **Anonymous reads refused** (PACE: NASA's `ob-cumulus-prod-public` answers 403, though the store
+  opens). The collector records it; the render fails until `access.auth` is set, so a README cannot
+  claim "No credentials".
+- **Coordinates:** timedelta leads (`step`, `lead`) as hours, not nanoseconds; dimensions with no
+  coordinate variable (`node`, `nele`, `eta_rho`, `X`, `Y`) listed with their size; the range of
+  non-dimension coordinates (2-D or unstructured lat/lon, run times) up to 10 M values. NaT run times
+  (best series) are skipped: `ww3_hawaii` broke on them once ranges were read.
+- **Format sample** takes at least 10 files, so one flat folder (PACE) is not just its two ends.
+
+Seen, not changed: PACE stores carry a `palette` display variable and up to ten nested groups
+(`/8Day/0p1deg/chunks_16`); FMRC stores (casco, necofs) have `time` = run time, so their time
+coverage is the run dates, not the forecast end; `fish-pace/coastwatch/ocean-heat` looks like an older
+copy of `noaa-ohc`.
 

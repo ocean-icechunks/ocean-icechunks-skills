@@ -256,7 +256,14 @@ def render_collection(source, auto_dir, products_dir, out):
         sf = auto.get("source_files")
         if sf:
             fmt = sf.get("format", "files")
-            data.append(f"**{FORMATS.get(fmt, fmt)}:** `{sf['path']}`, {sf['files']:,} files, {sf['size']}")
+            # Counted from the store's references there is no size; a listing that finds more files
+            # than the store uses says how many it uses.
+            text = f"**{FORMATS.get(fmt, fmt)}:** `{sf['path']}`, {sf['files']:,} files"
+            if sf.get("size"):
+                text += f", {sf['size']}"
+            if sf.get("referenced") not in (None, sf["files"]):
+                text += f" ({sf['referenced']:,} used by the store)"
+            data.append(text)
             if "://" in sf["path"]:  # files outside the collection, e.g. AWS (s3:// or https://)
                 files_link = f"[{fmt}]({sf.get('url') or sf['path']})"
             else:
@@ -409,7 +416,10 @@ def variables_section(p, auto, readme):
         coords = []
         for c in ordered(auto["coordinates"][group], order.get("coordinates")):
             size = f"on `{c['on']}`" if c.get("on") else f"{c['size']:,}" + (f" ({c['as_of']})" if c.get("as_of") else "")
-            coords.append([f"`{c['name']}`", size, cnotes.get(c["name"]) or c.get("values", "")])
+            values = cnotes.get(c["name"]) or c.get("values", "")
+            if not values and c.get("no_coordinate"):
+                values = "index only (no coordinate variable)"
+            coords.append([f"`{c['name']}`", size, values])
         blocks.append(table(["Coordinate", "Size", "Values"], coords))
     blocks.append(readme.get("Variable notes", ""))
     return "\n\n".join(b for b in blocks if b)
@@ -432,6 +442,9 @@ def source_formats_section(auto):
         return ""
     rows = [[f["format"], f"{f['files']:,}", f"`{f['first']}`", f"`{f['last']}`"] for f in formats]
     notes = [text for prefix, text in FORMAT_NOTES.items() if any(f["format"].startswith(prefix) for f in formats)]
+    if any(f["format"].startswith("not readable") for f in formats):
+        notes.insert(0, "**Some source files refused an anonymous read.** Reading data from this store needs "
+                        "credentials for the provider's files.")
     if len(formats) > 1:
         notes.insert(0, "**The files are not all in one format.** Code that opens them directly must handle each.")
     return "\n\n".join(["## Source file format",
@@ -519,6 +532,11 @@ def render_product(source, auto_dir, out):
         errors.append(f"{where}: store values for '{front.get('id')}' lack 'store_attributes'")
     if auto:
         errors += order_errors(front, auto, where)
+        formats = (auto.get("source_files") or {}).get("formats") or []
+        if any(f["format"].startswith("not readable") for f in formats) and not (front.get("access") or {}).get("auth"):
+            # pace-oci: the README would otherwise promise "No credentials and no account".
+            errors.append(f"{where}: some source files refused an anonymous read; set access.auth "
+                          "to say what credentials reading the data needs")
     if not str(front.get("store_url", "")).startswith("https://"):
         errors.append(f"{where}: store_url must be a public https:// URL for the built-in loader")
     if errors:

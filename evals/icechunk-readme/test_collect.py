@@ -101,6 +101,36 @@ class Offline(unittest.TestCase):
         self.assertEqual(collect.split_s3_url("s3://noaa-bucket/data/v2.1/avhrr/"),
                          ("https://noaa-bucket.s3.amazonaws.com", "noaa-bucket", "data/v2.1/avhrr/"))
 
+    def test_timedelta_values(self):
+        import numpy as np
+        import xarray as xr
+        lead = xr.DataArray(np.array([0, 3600, 514800], dtype="timedelta64[s]").astype("timedelta64[ns]"))
+        self.assertEqual(collect.values_text(lead), "0 to 143 h")
+        half = xr.DataArray(np.array([0, 1800], dtype="timedelta64[s]"))
+        self.assertEqual(collect.values_text(half), "0 to 30 min")
+        runs = xr.DataArray(np.array(["2026-11-01", "NaT", "2026-11-03"], dtype="datetime64[ns]"))
+        self.assertEqual(collect.values_text(runs), "2026-11-01T00Z to 2026-11-03T00Z")
+
+    def test_https_url(self):
+        class Opts:
+            def __init__(self, endpoint_url, region):
+                self.endpoint_url, self.region = endpoint_url, region
+
+        class Container:
+            def __init__(self, opts):
+                self.store = [opts]
+        config = {"s3://ocean-icechunks/necofs-waves/netcdf/": Container(Opts("https://data.source.coop", "us-west-2")),
+                  "s3://noaa-nos-ofs-pds/": Container(Opts(None, "us-east-1"))}
+        self.assertEqual(collect.https_url("s3://ocean-icechunks/necofs-waves/netcdf/a.nc", config),
+                         "https://data.source.coop/ocean-icechunks/necofs-waves/netcdf/a.nc")
+        self.assertEqual(collect.https_url("s3://noaa-nos-ofs-pds/gomofs/netcdf/b.nc", config),
+                         "https://noaa-nos-ofs-pds.s3.us-east-1.amazonaws.com/gomofs/netcdf/b.nc")
+        self.assertEqual(collect.https_url("https://coastwatch.noaa.gov/x.nc", config), "https://coastwatch.noaa.gov/x.nc")
+
+    def test_newest_without_dates(self):
+        data = [("https://h/a/run_b.nc", 0, ""), ("https://h/a/run_a.nc", 0, "")]
+        self.assertEqual(collect.newest(data), ("https://h/a/run_b.nc", "last name"))
+
     def test_relative(self):
         base = "https://data.source.coop/ocean-icechunks/pacioos"
         self.assertEqual(collect.relative(base + "/wrf_hi/netcdf/", base), "wrf_hi/netcdf/")
@@ -164,7 +194,9 @@ class Live(unittest.TestCase):
         pick = lambda vs: {v["name"]: {k: v.get(k) or "" for k in ("dims", "units", "standard_name")}  # noqa: E731
                            for v in vs}
         self.assertEqual(pick(live["variables"]["/"]), pick(frozen["variables"]["/"]))
-        stable = lambda cs: {c["name"]: {k: c.get(k) for k in ("on", "values") if k in c}  # noqa: E731
+        # Ranges of coordinates on another dimension (run times) move daily; their placement does not.
+        stable = lambda cs: {c["name"]: {k: c.get(k) for k in ("on", "values")  # noqa: E731
+                                         if k in c and not (k == "values" and c.get("on"))}
                              for c in cs if c["name"] != "time"}
         self.assertEqual(stable(live["coordinates"]["/"]), stable(frozen["coordinates"]["/"]))
         self.assertEqual(set(live["store_attributes"]), set(frozen["store_attributes"]))
@@ -192,6 +224,18 @@ class Live(unittest.TestCase):
         with self.assertRaises(collect.NotListable):
             collect.list_prefix("https://coastwatch.noaa.gov/pub/socd/lsa/heat-content/")
 
+    def test_counts_from_references(self):
+        """noaa-ohc/na: CoastWatch cannot be listed, so the store's references count the files."""
+        auto = collect.collect({"store_url": "https://data.source.coop/ocean-icechunks/noaa-ohc/na"},
+                               "https://data.source.coop/ocean-icechunks/noaa-ohc")
+        sf = auto["source_files"]
+        self.assertEqual(sf["counted_from"], "store references")
+        self.assertGreater(sf["files"], 2000)
+        self.assertTrue(sf["url"].startswith("https://coastwatch.noaa.gov/"))
+        self.assertNotIn("size", sf)
+        # Its eras are different formats: NetCDF-3 daily files, NetCDF-4 14-day files.
+        self.assertGreater(len(sf["formats"]), 1)
+
     def test_s3_container_and_groups(self):
         """noaa-oisst: an s3:// container, arrays only in groups, materialized monthly group."""
         auto = collect.collect({"store_url": "https://data.source.coop/ocean-icechunks/noaa-oisst/oisst.icechunk"},
@@ -205,7 +249,7 @@ class Live(unittest.TestCase):
         """wrf_hi files are NetCDF-4/HDF5, unlike roms_hiig's NetCDF-3, so h5py reads them."""
         endpoint, objects = collect.list_prefix("https://data.source.coop/ocean-icechunks/pacioos/wrf_hi/netcdf/2017/")
         key = next(k for k, _, _ in objects if k.endswith(".nc"))
-        _, attrs = collect.netcdf_attributes(endpoint, key)
+        _, attrs = collect.netcdf_attributes(f"{endpoint}/{key}")
         self.assertIn("title", attrs)
         self.assertFalse(set(attrs) & collect.NC_INTERNAL)
 

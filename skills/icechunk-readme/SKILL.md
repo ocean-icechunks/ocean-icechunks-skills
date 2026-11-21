@@ -7,8 +7,8 @@ description: Write the README and documentation files for a published collection
 
 **Status: Experimental, in progress.** The layout was settled by hand on one
 collection (PacIOOS, Source Cooperative, November 2026). The scripts were also
-run on HYCOM, CoastWatch OHC, GOBAI-O2, OA indicators and OISST; several
-PacIOOS assumptions remain (see the design note). Say so when you use them.
+run on 19 other stores on Source Cooperative (`ocean-icechunks`, `fish-pace`);
+several PacIOOS assumptions remain (see the design note). Say so when you use them.
 
 ## Two levels
 
@@ -76,12 +76,16 @@ python3 scripts/collect_auto.py collection.md --out auto/     # every listed pro
 python3 scripts/collect_auto.py <product>.md  --out auto/     # one product
 ```
 
-- `source_files` and `netcdf_attributes` come from the product's `netcdf_url`.
-  The store cannot supply that prefix, because its virtual chunk container is
-  usually the whole collection or the provider's host. It must answer an S3
-  listing (Source Cooperative, an AWS bucket, `s3://`). A plain web server
-  (CoastWatch, NCEI) cannot be listed, so they are left out, and the script
-  says so.
+- `source_files` counts the files the store references, read from the store
+  itself, so it works on any host. That needs memory, about 0.4 GB per million
+  chunks, so above `--max-refs` (3 million) it is skipped. A listing of the
+  product's `netcdf_url` adds sizes and the newest file. It must answer an S3
+  listing (Source Cooperative, an AWS bucket, `s3://`); a plain web server
+  (CoastWatch, NCEI) cannot be listed. With neither, `source_files` is left
+  out, and the script says why.
+- If sampled source files refuse an anonymous read (NASA's PACE bucket), the
+  script says so, and the render fails until `access.auth` says what
+  credentials are needed.
 - `s3://` virtual chunk containers are opened with anonymous S3 credentials, and
   the README's loader is written to match. A materialized store gets no
   credentials, and a store whose arrays are in groups gets a `group` argument.

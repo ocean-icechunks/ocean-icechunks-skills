@@ -22,6 +22,7 @@ import datetime as dt
 import io
 import json
 import math
+import os
 import pathlib
 import re
 import struct
@@ -39,6 +40,11 @@ UNITS = {"degrees_north": "°N", "degree_north": "°N", "degrees_east": "°E", "
 NC_INTERNAL = {"_NCProperties", "_nc3_strict", "_IsNetcdf4", "_SuperblockVersion"}
 TIMEOUT = 60
 MAX_SAMPLE = 40  # most file headers read to find the source formats
+MIN_SAMPLE = 10
+MAX_COORD_VALUES = 10_000_000  # largest non-dimension coordinate read for its range
+# Most chunk references listed to count the files a store uses. roms_hiig's 804,025 took 5 s and
+# ~400 MB; HYCOM GOFS (~23 million) would not fit a small hub. Above this, the listing alone counts.
+MAX_REFS = 3_000_000
 
 
 class CollectError(Exception):
@@ -72,9 +78,45 @@ def open_main(store_url):
     auth = icechunk.containers_credentials({
         p: icechunk.s3_anonymous_credentials() if p.startswith("s3://") else icechunk.credentials.HttpAccess
         for p in containers})
+    config = dict(repo.config.virtual_chunk_containers or {})
     repo = repo.reopen(authorize_virtual_chunk_access=auth)
     snap = next(iter(repo.ancestry(branch="main")))
-    return repo.readonly_session("main"), snap, containers
+    return repo.readonly_session("main"), snap, containers, config
+
+
+def https_url(url, config):
+    """HTTPS form of a reference, so its first bytes can be read with a range request.
+
+    An s3:// container on Source Cooperative (necofs-waves) names its endpoint and is path-style;
+    one on AWS (noaa-gomofs) has no endpoint and is reached as <bucket>.s3.<region>.amazonaws.com.
+    """
+    if not url.startswith("s3://"):
+        return url
+    prefix = max((p for p in config if url.startswith(p)), key=len, default=None)
+    opts = config[prefix].store[0] if prefix else None
+    bucket, _, key = url[5:].partition("/")
+    endpoint = getattr(opts, "endpoint_url", None)
+    if endpoint:
+        return f"{endpoint.rstrip('/')}/{bucket}/{key}"
+    region = getattr(opts, "region", None)
+    return f"https://{bucket}.s3.{region}.amazonaws.com/{key}" if region else f"https://{bucket}.s3.amazonaws.com/{key}"
+
+
+def chunk_count(store, groups):
+    """Chunks the store could reference, from array shapes, to decide whether listing them is safe."""
+    import zarr
+    root = zarr.open_group(store, mode="r")
+    total = 0
+    for g in groups:
+        group = root if g == "/" else root[g.lstrip("/")]
+        for _, a in group.arrays():
+            total += math.prod(math.ceil(n / c) for n, c in zip(a.shape, a.chunks)) if a.shape else 1
+    return total
+
+
+def referenced_files(session, config):
+    """Every file the store references, as HTTPS URLs, sorted."""
+    return sorted({https_url(u, config) for u in session.all_virtual_chunk_locations()})
 
 
 def array_groups(store):
@@ -107,8 +149,20 @@ def values_text(var):
     if var.size == 0:
         return ""
     if np.issubdtype(var.dtype, np.datetime64):
-        lo, hi = var.values.min(), var.values.max()
+        vals = var.values[~np.isnat(var.values)]  # a best series's run time is NaT where no run covers
+        if not vals.size:
+            return ""
+        lo, hi = vals.min(), vals.max()
         return time_text(lo) if lo == hi else f"{time_text(lo)} to {time_text(hi)}"
+    if np.issubdtype(var.dtype, np.timedelta64):  # forecast leads (step, lead): "0 to 143 h", not ns
+        vals = var.values[~np.isnat(var.values)]
+        if not vals.size:
+            return ""
+        for unit, name in (("h", "h"), ("m", "min"), ("s", "s")):
+            if not (vals % np.timedelta64(1, unit)).any():
+                lo, hi = (vals.min() // np.timedelta64(1, unit)), (vals.max() // np.timedelta64(1, unit))
+                return f"{lo} {name}" if lo == hi else f"{lo} to {hi} {name}"
+        return f"{vals.min()} to {vals.max()}"
     if not np.issubdtype(var.dtype, np.number):
         return ""
     vals = var.values
@@ -143,15 +197,22 @@ def group_values(store, group, last_update):
                 dims.append(d)
     coords = []
     for d in dims:
+        c = {"name": d, "size": int(ds.sizes[d])}
         if d in ds.coords:
-            c = {"name": d, "size": int(ds.sizes[d])}
             if np.issubdtype(ds[d].dtype, np.datetime64):
                 c["as_of"] = last_update
             c["values"] = values_text(ds[d])
-            coords.append(c)
+        else:
+            # A dimension with no coordinate variable (node, nele, eta_rho): keep its size.
+            c["no_coordinate"] = True
+        coords.append(c)
         for n in sorted(ds.coords):
             if n not in ds.dims and ds[n].dims and ds[n].dims[0] == d:
-                coords.append({"name": n, "on": ", ".join(ds[n].dims), "values": ""})
+                # 2-D lat/lon, unstructured node lat/lon, run times on time: their range too,
+                # unless reading them would be large.
+                small = ds[n].size <= MAX_COORD_VALUES
+                coords.append({"name": n, "on": ", ".join(ds[n].dims),
+                               "values": values_text(ds[n]) if small else ""})
     for n in sorted(ds.coords):
         if not ds[n].dims:
             coords.append({"name": n, "size": 1, "values": values_text(ds[n])})
@@ -254,10 +315,25 @@ def source_files(netcdf_url, data_base):
                "url": f"{endpoint}/{split_s3_url(netcdf_url)[2]}",
                "files": len(data),
                "size": size_text(sum(s for _, s, _ in data))}
-    formats, summary["formats_sampled"] = file_formats(endpoint, data)
-    rel = lambda key: relative(f"{endpoint}/{key}", data_base)  # noqa: E731  same base as "path"
-    summary["formats"] = [{**f, "first": rel(f["first"]), "last": rel(f["last"])} for f in formats]
-    return summary, endpoint, data
+    urls = [(f"{endpoint}/{k}", s, m) for k, s, m in data]
+    add_formats(summary, [u for u, _, _ in urls], data_base)
+    return summary, urls
+
+
+def add_formats(summary, urls, data_base):
+    formats, summary["formats_sampled"] = file_formats(urls)
+    summary["formats"] = [{**f, "first": relative(f["first"], data_base), "last": relative(f["last"], data_base)}
+                          for f in formats]
+
+
+def summary_from_references(refs, data_base):
+    """source_files from the files the store references, when no listing is possible."""
+    prefix = os.path.commonprefix(refs).rpartition("/")[0] + "/"
+    kinds = {FORMATS.get(pathlib.PurePosixPath(u).suffix.lower(), "files") for u in refs}
+    summary = {"format": kinds.pop() if len(kinds) == 1 else "files",
+               "path": relative(prefix, data_base), "url": prefix, "files": len(refs)}
+    add_formats(summary, refs, data_base)
+    return summary
 
 
 MAGIC = {b"CDF\x01": "NetCDF-3 classic", b"CDF\x02": "NetCDF-3 64-bit offset",
@@ -272,29 +348,42 @@ def magic_format(head, key):
     return f"unknown (first bytes {head[:8]!r})"
 
 
-def file_formats(endpoint, data):
+def file_formats(urls):
     """Format of the first and last file in each folder, from their first 8 bytes.
 
     Reading every file's header would cost one request per file (thousands); a provider that
     changes format usually does so between folders (years, versions), so ends of folders catch it.
     """
     folders = {}
-    for key, _, _ in data:
+    for key in urls:
         folders.setdefault(key.rpartition("/")[0], []).append(key)
-    sample = sorted({k for keys in folders.values() for k in (min(keys), max(keys))})
+    sample = {k for keys in folders.values() for k in (min(keys), max(keys))}
+    if len(sample) < MIN_SAMPLE:  # one flat folder (pace-oci) would give only 2
+        everything = sorted(urls)
+        step = max(1, len(everything) // MIN_SAMPLE)
+        sample |= set(everything[::step][:MIN_SAMPLE])
+    sample = sorted(sample)
     if len(sample) > MAX_SAMPLE:  # noaa-oisst has 543 monthly folders; keep the requests bounded
         step = (len(sample) - 1) / (MAX_SAMPLE - 1)
         sample = [sample[round(i * step)] for i in range(MAX_SAMPLE)]
     formats = {}
     for key in sample:
-        head, _ = http(f"{endpoint}/{key}", {"Range": "bytes=0-7"})
-        fmt = magic_format(head, key)
+        try:
+            head, _ = http(key, {"Range": "bytes=0-7"})
+            fmt = magic_format(head, key)
+        except urllib.error.HTTPError as exc:
+            # pace-oci: the store opens anonymously but NASA's bucket answers 403, so data reads
+            # need credentials. Record it: the README must not say "No credentials".
+            fmt = f"not readable anonymously (HTTP {exc.code})"
         entry = formats.setdefault(fmt, {"format": fmt, "files": 0, "first": key, "last": key})
         entry["files"] += 1
         entry["last"] = key
     spread = "" if len(sample) < MAX_SAMPLE else f", {MAX_SAMPLE} of them spread evenly"
-    return list(formats.values()), (f"first and last file in each of {len(folders)} folders{spread}, "
-                                    f"{len(sample)} of {len(data):,} files")
+    where = "the only folder" if len(folders) == 1 else f"each of {len(folders)} folders"
+    if len(sample) > 2 * len(folders) or len(folders) == 1:
+        where += " and others spread through it" if len(folders) == 1 else ", and others"
+    return list(formats.values()), (f"first and last file in {where}{spread}, "
+                                    f"{len(sample)} of {len(urls):,} files")
 
 
 def newest(data):
@@ -309,7 +398,9 @@ def newest(data):
     dated = [(name_date(k), k) for k, _, _ in data if name_date(k)]
     if len(dated) == len(data):
         return max(dated)[1], "filename date"
-    return max(data, key=lambda o: o[2])[0], "last modified"
+    if all(m for _, _, m in data):
+        return max(data, key=lambda o: o[2])[0], "last modified"
+    return max(k for k, _, _ in data), "last name"  # store references carry no dates
 
 
 # --- NetCDF global attributes ------------------------------------------------------------
@@ -389,8 +480,7 @@ def nc3_attributes(f):
     return attrs
 
 
-def netcdf_attributes(endpoint, key):
-    url = f"{endpoint}/{key}"
+def netcdf_attributes(url):
     f = io.BufferedReader(RangeReader(url), buffer_size=1 << 20)
     magic = f.peek(8)[:8]
     if magic[:3] == b"CDF":
@@ -409,9 +499,9 @@ def netcdf_attributes(endpoint, key):
 
 # --- one product -------------------------------------------------------------------------
 
-def collect(product, data_base):
+def collect(product, data_base, max_refs=MAX_REFS):
     import zarr
-    session, snap, containers = open_main(product["store_url"])
+    session, snap, containers, config = open_main(product["store_url"])
     last_update = snap.written_at.astimezone(dt.timezone.utc).date().isoformat()
     groups = array_groups(session.store)
     if not groups:
@@ -430,14 +520,36 @@ def collect(product, data_base):
                 group_attributes[g] = jsonable(attrs)
     # Over every group: noaa-ohc's groups are eras (daily 2020-2024, 14day 2025-).
     auto["time_range"] = [min(ranges), max(ranges)] if ranges else []
+    # Files the store actually uses, from its references: works on any host (CoastWatch, NCEI),
+    # and counts what the store reads, not whatever else sits under the prefix.
+    refs, notes = None, []
+    if containers:
+        n = chunk_count(session.store, groups)
+        if n <= max_refs:
+            refs = referenced_files(session, config)
+        else:
+            notes.append(f"references not counted: about {n:,} chunks, over --max-refs {max_refs:,}")
     data = None
     if product.get("netcdf_url"):
         url = product["netcdf_url"]
         url = url if url.endswith("/") else url + "/"
         try:
-            auto["source_files"], endpoint, data = source_files(url, data_base)
+            auto["source_files"], data = source_files(url, data_base)
+            auto["source_files"]["counted_from"] = "listing"
+            if refs is not None:
+                auto["source_files"]["referenced"] = len(refs)
         except NotListable as exc:
-            auto["_source_files"] = f"left out: {exc}"
+            notes.append(str(exc))
+    if "source_files" not in auto and refs:
+        auto["source_files"] = summary_from_references(refs, data_base)
+        auto["source_files"]["counted_from"] = "store references"
+        data = [(u, 0, "") for u in refs]
+    refused = [f for f in (auto.get("source_files") or {}).get("formats", []) if f["format"].startswith("not readable")]
+    if refused:
+        notes.append(f"{sum(f['files'] for f in refused)} sampled source files refused an anonymous read; "
+                     "data reads need credentials, so set access.auth in the source file")
+    if notes:
+        auto["_source_files"] = "; ".join(notes)
     auto.update(groups=groups, snapshot=snap.id, last_update=last_update,
                 virtual_chunk_containers=containers,
                 variables=variables, coordinates=coordinates,
@@ -446,9 +558,9 @@ def collect(product, data_base):
         auto["group_attributes"] = group_attributes
     if (product.get("metadata") or {}).get("netcdf_attributes"):
         if not data:
-            raise CollectError("metadata.netcdf_attributes is set but no listable netcdf_url to read from")
+            raise CollectError("metadata.netcdf_attributes is set but no source files were found")
         key, selected_by = newest(data)
-        url, attrs = netcdf_attributes(endpoint, key)
+        url, attrs = netcdf_attributes(key)
         auto["netcdf_attributes"] = {"file": pathlib.PurePosixPath(key).name, "url": url,
                                      "attributes": attrs, "selected_by": selected_by}
     return auto
@@ -470,6 +582,9 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("source", type=pathlib.Path, help="collection or product source file (.md)")
     parser.add_argument("--out", type=pathlib.Path, required=True, help="directory for <product id>.json")
+    parser.add_argument("--max-refs", type=int, default=MAX_REFS,
+                        help=f"most chunk references to list when counting source files (default {MAX_REFS:,}, "
+                             "about 1.2 GB of memory; each million needs about 0.4 GB)")
     args = parser.parse_args(argv)
     if not args.source.is_file():
         parser.error(f"{args.source}: not found")
@@ -488,14 +603,15 @@ def main(argv=None):
             for field in ("id", "store_url"):
                 if not product.get(field):
                     raise CollectError(f"no {field}")
-            auto = collect(product, data_base)
+            auto = collect(product, data_base, args.max_refs)
         except Exception as exc:  # one unreadable store must not stop the others
             print(f"collect_auto: {src}: {type(exc).__name__}: {exc}", file=sys.stderr)
             status = 1
             continue
+        if auto.get("_source_files"):
+            print(f"collect_auto: {src}: {auto['_source_files']}", file=sys.stderr)
         if "source_files" not in auto:
-            why = auto.get("_source_files") or "no netcdf_url"
-            print(f"collect_auto: {src}: no source_files ({why})", file=sys.stderr)
+            print(f"collect_auto: {src}: no source_files", file=sys.stderr)
         path = args.out / f"{product['id']}.json"
         path.write_text(json.dumps(auto, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
         print(f"wrote {path}")
