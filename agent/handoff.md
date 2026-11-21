@@ -6,158 +6,68 @@ on anything under "Open threads".
 
 ## Repo state
 
-- Repo: `ocean-icechunks/ocean-icechunks-skills`, at
-  `/home/jovyan/ocean-icechunks-skills`. Issue ocean-icechunks/icechunks#46 calls
-  it `ocean-icechunks/skills`; Eli chose to keep the current name (2026-11-13).
-- Two skills, both Experimental:
-  - `virtual-icechunk`. Moved here from `nmfs-opensci/agent-skills` on 2026-11-13,
-    history kept with `git-filter-repo`. Old commit messages name
-    `nmfs-opensci/agent-skills#N` for that repo's issues; the design notes were
-    rewritten the same way.
-  - `archive-to-cloud` (#8, merged 2026-11-13; #4 closed): audit a provider's archive,
-    copy it unchanged to object storage, verify the copies. See "archive-to-cloud" below.
-- **License: CC0-1.0** (Eli, 2026-11-13: "not really code"). `virtual-icechunk` was
-  Apache-2.0 in agent-skills; every commit to it was by Eli or her agents, so
-  nobody else's work was relicensed.
-- Hub install: `~/.agents/skills/<skill>` points at this checkout's `skills/<skill>`,
-  and `~/.claude/skills/<skill>` points through it (`~/.gemini/config/skills` *is*
-  `~/.agents/skills`). Both skills since 2026-11-13. They follow whatever branch is
-  checked out here.
+- Repo: `ocean-icechunks/ocean-icechunks-skills`, at `/home/jovyan/ocean-icechunks-skills`.
+  (ocean-icechunks/icechunks#46 calls it `ocean-icechunks/skills`; Eli kept the current name, 2026-11-13.)
+- **Four skills, all Experimental:**
+  - `virtual-icechunk`: moved from `nmfs-opensci/agent-skills` on 2026-11-13 with history (old commit
+    messages cite `nmfs-opensci/agent-skills#N`). Decisions: [virtual-icechunk-skill.md](../docs/design/virtual-icechunk-skill.md).
+  - `archive-to-cloud` (#8): audit, copy unchanged, verify. Decisions: [archive-to-cloud.md](../docs/design/archive-to-cloud.md).
+  - `building-fmrc-virtual-icechunk` and `adding-ugrid-conventions`: contributed by Rich Signell (rsignell),
+    merged 2026-11-19 (#17, #18).
+- **License: CC0-1.0** (Eli, 2026-11-13: "not really code"). `virtual-icechunk` was Apache-2.0 in
+  agent-skills; every commit to it was by Eli or her agents, so nobody else's work was relicensed.
+- Hub install: `~/.agents/skills/<skill>` points at this checkout's `skills/<skill>`, and
+  `~/.claude/skills/<skill>` points through it (`~/.gemini/config/skills` *is* `~/.agents/skills`).
+  They follow whatever branch is checked out here. README install recipes were verified on 2026-11-13.
 
 ## Working principles
 
-- `AGENTS.md` and `CONTRIBUTING.md` are strict: one `SKILL.md` per bundle with
-  only `name` and `description` in its frontmatter, no README inside a skill
-  directory, evals kept under `evals/`, uncertain guidance marked Experimental
-  or Provisional.
-- Run `ruby .github/scripts/validate_skills.rb` before every commit. It also
-  scans the tree for secrets, including untracked files, and binary ones as
-  bytes (fixed in #8; it used to crash on a `.pyc`).
-- Script tests live in `evals/<skill>/` (e.g. `test_verify_copy.py`), outside
-  the bundle, and must not write `__pycache__` into a skill directory.
-- Every change goes through an issue, a branch and a PR, with the real reasoning
-  in the PR body.
-- Never modify production Icechunk stores, datasets or object storage while
-  validating a skill.
-- `docs/virtual-icechunk-patterns.md` is the 2026-09-03 evidence base the skill
-  was built from. Read it before changing technical claims. For CoastWatch,
-  `ocean-icechunks/icechunks` and its notes are fresher.
+- `AGENTS.md` and `CONTRIBUTING.md` are strict: one `SKILL.md` per bundle with only `name` and
+  `description` in its frontmatter, no README inside a skill directory, evals kept under `evals/`,
+  uncertain guidance marked Experimental or Provisional.
+- Run `ruby .github/scripts/validate_skills.rb` before every commit (it also scans for secrets,
+  untracked and binary files included).
+- Script tests live in `evals/<skill>/`, outside the bundle, and must not write `__pycache__` into a
+  skill directory.
+- Every change goes through an issue, a branch and a PR, with the real reasoning in the PR body.
+- Never modify production Icechunk stores, datasets or object storage while validating a skill.
+  Scratch work goes under `ocean-icechunks/test-repo/` on Source Cooperative.
+- `docs/virtual-icechunk-patterns.md` is the 2026-09-03 evidence base the skill was built from; read it
+  before changing technical claims. For CoastWatch, `ocean-icechunks/icechunks` is fresher.
+- Build lessons are written first in the store repos (`icechunks`, `hycom`, `cefi-icechunks`, `pacioos`, …)
+  and harvested into the skill on purpose; someone has to carry them across.
+- The public artifact "Four Icechunk playbooks" (https://claude.ai/artifact/Q9ZqcXiqYZVBc2tXygyHVd, linked
+  from the README) mirrors `docs/other-icechunk-playbooks.md`; keep them in step. Its source HTML is gone:
+  read it by URL and republish to the same URL.
 
-## What virtual-icechunk has been through
+## Recently shipped
 
-Used on real builds (OA indicators, HYCOM, CEFI audit, PacIOOS probe); the
-evals have only been dry-run on paper. Build lessons are written first in the
-store repos (`ocean-icechunks/icechunks`, `hycom`, `cefi-icechunks`, …) and
-harvested into the skill on purpose. History of decisions:
-[virtual-icechunk-skill.md](../docs/design/virtual-icechunk-skill.md).
-
-## archive-to-cloud: decisions (Eli, 2026-11-13)
-
-Reasoning in full in the #8 PR body. Evidence came from ocean-icechunks/pacioos
-(`upload/`, `docs/design/`, #2), noaa-nwfsc/cefi-icechunks (`audit/`, notes), and
-ocean-icechunks/icechunks (AGENTS.md, notes).
-
-- **Only the verify script is bundled.** No upload scripts: `copy-script.md` is a
-  contract for writing one per job, with PacIOOS `upload/` as the worked example.
-  Don't "complete" the skill by importing the PacIOOS scripts.
-- **The audit is split by job.** Inventory and integrity checks are here; whether files
-  can be virtualized stays in `virtual-icechunk`. Don't duplicate chunking guidance.
-- **`change-detection.md` is Provisional** until ocean-icechunks/pacioos#2 settles;
-  harvest the answers from there.
-- `verify_copy.py` was tested on Python 3.12 only. Listing and sampled MD5s were run on
-  the PacIOOS copies, and listing on the CEFI NODD bucket. The evals are written, not run.
-- Found on the way: ocean-icechunks/pacioos#9 (the upload script hides a failed listing
-  and could overwrite copies). PacIOOS's copy, their fix.
-
-## Other playbooks: positioning (Eli, 2026-11-13)
-
-From the ESIP dynamical.org links (Earthmover skill, dynamical.org guides, Development
-Seed `virtualizarr-data-pipelines`, dynamical bit rounding). Shipped in #11.
-
-- **Our skills are stage 1**: a knowledge layer for ocean sources, for experimental and
-  research-level virtual stores, for someone starting from NetCDF/HDF5 files on a server
-  or object storage (or moving them there). **Development Seed's template is stage 2**,
-  production pipelines; what stage 1 works out becomes its processor. Earthmover is a
-  skill too but is built around file formats, tailored to Arraylake, and assumes files are
-  already in an Arraylake bucket (no HTTPS/THREDDS; checked in its SKILL.md step 2).
-  dynamical.org is lessons, not reusable code. None of them is a base to rebuild ours on.
-- **The comparison lives in two places, keep them in step**: the public artifact "Four
-  Icechunk playbooks" (https://claude.ai/artifact/Q9ZqcXiqYZVBc2tXygyHVd, linked from the
-  README) and `docs/other-icechunk-playbooks.md`. The artifact's source HTML was in a session
-  scratchpad and is gone; to edit it, read it by URL first and republish to the same URL.
-
-## HYCOM GOMb0.01 lessons: shipped (#20 → #25, merged 2026-11-19)
-
-Evidence: ocean-icechunks/hycom `claude/notes/issue-21-research/findings.md` and `plan-issue-17.md`.
-What a later session needs to know, beyond the diff:
-
-- **The build-only zero cache was run, not just read**: on icechunk 2.3.1, a zero
-  `CachingConfig(num_chunk_refs=0)` passed to `Repository.open` is not saved (readers keep the
-  default cache, and the saved manifest splitting still applies). Passed to `create`, it is
-  saved and reaches readers. The full build loop snippet was not run.
-- **Item 16 of the issue was out of date**: Eli confirmed the gridlook group viewer renders
-  (2026-11-19, recorded in the HYCOM plan), so the skill calls it verified.
-- Still labelled Unverified: creating empty arrays without a manifest instead of a skeleton (planned
-  in HYCOM, not run). Update it once the full-record build reports.
-- Left alone on purpose: the wrong `to_icechunk(encoding=…)` snippets (#13, still open) and the
-  `chunks={}`/`_FillValue` lessons (#14).
-
-## s3:// vs https:// references: investigated (#27, 2026-11-19..20)
-
-Merged in #28 (2026-11-20); everything is in
-[docs/design/s3-vs-https/README.md](../docs/design/s3-vs-https/README.md). In one line: `s3_store` is
-2–7× slower than `http_store` on endpoints that offer HTTP/2 (Source Coop, GCS, OSN) because the Rust AWS
-SDK negotiates HTTP/2 and hyper's HTTP/2 is slow; filed as earth-mover/icechunk#2571. Decisions (Eli):
-it is an Icechunk issue, nothing goes to Source Coop; keep the test stores in
-`ocean-icechunks/test-repo/s3-vs-https/`. The skill's "prefer HTTPS" lines are untouched on purpose until
-#2571 is answered (Arraylake forbids `https://` virtual prefixes, which pulls the other way).
+- **s3:// vs https:// references** (#27 → #28, 2026-11-20): `s3_store` is 2–7× slower than `http_store` on
+  endpoints that offer HTTP/2 (Source Coop, GCS, OSN); filed as earth-mover/icechunk#2571. Eli: an Icechunk
+  issue, nothing to Source Coop; keep the test stores in `ocean-icechunks/test-repo/s3-vs-https/`. Skill's
+  "prefer HTTPS" lines untouched until #2571 is answered (Arraylake forbids `https://` prefixes).
+  [s3-vs-https/README.md](../docs/design/s3-vs-https/README.md).
+- **HYCOM GOMb0.01 lessons** (#20 → #25, 2026-11-19): what the diff doesn't say is in
+  [virtual-icechunk-skill.md](../docs/design/virtual-icechunk-skill.md).
 
 ## Open threads
 
-- **s3:// vs https:// in the skill, #27**: decide the skill rule once earth-mover/icechunk#2571 has an answer,
-  then update `references/source-patterns.md` and
-  `learn-and-evolve.md`. The design note is the folder README; there is no separate note yet.
+Reviewed 2026-11-21; all are under two weeks old.
 
-- **Standardized READMEs, #21** (opened 2026-11-19, not started): the product and store
-  READMEs on Source Coop are generated from a source file (YAML by default) plus a render
-  script that pulls tables and the snapshot from the store. Phase 1 is the templates;
-  phase 2 is a few layouts to compare. Eli does not write the READMEs. Agents write
-  them from `project-docs.md` and then add sections on request, which is why they drift.
-  The schema must be broad enough to hold those requests. "How to open" gets restructured
-  so it isn't one code block. Overlaps #19.
-
-- **Lessons from the other playbooks, #10**: candidate additions (manifest-split cost
-  model, "what validated means", append vs region writes, parallel builds, license check,
-  Kerchunk is in *maintenance mode* not "deprecated", NetCDF3 sub-chunk refs for #3).
-  Nothing tested. Bit rounding was ruled out (materialized only). Whether keeping stores
-  current is in scope is Eli's open question; it decides how much of #10 matters.
-- **The move is finished** (ocean-icechunks/icechunks#46, closed 2026-11-13): here
-  #1 (a merge commit, to keep history), #2 and #6 (README). Elsewhere:
-  nmfs-opensci/agent-skills#41, icechunks#48, cefi-icechunks#9, pacioos#8, hycom#14,
-  and the PacIOOS team note. One follow-up: test `gh skill install` once `gh` in the
-  py-rocket image is 2.90 or later, then fill in the README's "Coming" note.
-- **Append alignment, #3 (was nmfs-opensci/agent-skills#21)**: decisions made, failure verified,
-  no skill edits yet. [append-alignment-issue-21.md](../docs/design/append-alignment-issue-21.md).
-  Eli has an upstream VirtualiZarr issue drafted but not posted.
-- **Lessons from the 2026-09 HYCOM GOFS 3.1 build await a Learn pass** (separate from #20,
-  which shipped the GOMb0.01 lessons), including two places the
-  skill is wrong: [inbound-from-hycom-2026-09.md](../docs/design/inbound-from-hycom-2026-09.md).
-- **Formats beyond NetCDF/HDF5 and FMRC**: deliberately deferred by Eli
-  (2026-09-18). [expanding-format-coverage.md](../docs/design/expanding-format-coverage.md).
-- **Running the evals**: earth-mover's harness would largely port.
+- **Ready, small, verified fixes**: #13 (`to_icechunk(encoding=…)` raises TypeError; still in 4 places,
+  starting at `SKILL.md:171`) and #15 (`copy-script.md:30` still says re-upload a copy with no sidecar).
+- **#14** PacIOOS reanalysis lessons (append attrs, `_FillValue`, `chunks={}`, …): provisional; overlaps
+  [inbound-from-hycom-2026-09.md](../docs/design/inbound-from-hycom-2026-09.md), which also awaits a Learn pass
+  (two places the skill is wrong; one is #13). Mark that note harvested once #13/#14 land.
+- **#3** append alignment: decisions made, no skill edits; waits on Eli's upstream VirtualiZarr issue
+  (drafted, not posted). [append-alignment-issue-21.md](../docs/design/append-alignment-issue-21.md).
+- **#19** publish the documentation bundle, and **#21** standardized READMEs (waits on Alex and Rich): overlap.
+- **#27** skill rule for s3:// vs https://: waits on earth-mover/icechunk#2571.
+- **#10** lessons from other playbooks: backlog; Eli's open question is whether keeping stores current is in scope.
+- **PR #5** (Renovate bot config, 2026-11-13): Eli to merge or close.
+- **`gh skill install`**: test once `gh` in the py-rocket image is 2.90 or later, then fill in the README's
+  "Coming" note.
+- **Formats beyond NetCDF/HDF5 and FMRC**: deliberately deferred by Eli (2026-09-18).
+  [expanding-format-coverage.md](../docs/design/expanding-format-coverage.md).
+- **Running the evals**: never done; earth-mover's harness would largely port.
   [earth-mover-comparison.md](../docs/design/earth-mover-comparison.md).
-
-## README install instructions: what was verified (2026-11-13)
-
-- Both README recipes (personal links, per-project `rsync`) were run under a throwaway
-  `HOME`: on a fresh machine, and on an old agent-skills-style install where
-  `~/.gemini/config/skills` is itself a symlink to `~/.agents/skills`.
-- On this hub, with the symlinked install, the skill is listed by Claude Code, by
-  `copilot skill list`, and by `agy -p` (Antigravity CLI). Codex is not installed here,
-  so its rows come from its docs only.
-- Skill paths and commands were checked against each vendor's docs on 2026-11-13.
-  Symlinks are documented only by Claude Code and Codex; for Copilot and Antigravity,
-  symlinks work on this hub but the docs don't say.
-- `gh skill install` (gh 2.90 and later) is only mentioned as coming, untested: the hub
-  has gh 2.86. Eli will update `gh` in the py-rocket image later; then test it and fill in
-  the README section.
