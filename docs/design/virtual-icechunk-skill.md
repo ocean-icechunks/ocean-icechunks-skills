@@ -93,3 +93,19 @@ The lesson for this repo is procedural: **a build's evidence lands in the build
 repository's own `claude/notes/`, and someone has to carry it across.** It sat
 uncollected for two weeks, during which this repo's handoff still said the skill
 had never been run. The eval scenarios remain un-executed.
+
+### HYCOM GOMb0.01 lessons (#20 → #25, merged 2026-11-19)
+
+Evidence: ocean-icechunks/hycom `claude/notes/issue-21-research/findings.md` and `plan-issue-17.md`. What the
+diff doesn't say:
+
+- **The build-only zero cache was run, not just read.** On icechunk 2.3.1, a zero
+  `CachingConfig(num_chunk_refs=0)` passed to `Repository.open` is not saved (readers keep the default cache,
+  and the saved manifest splitting still applies). Passed to `create`, it is saved and reaches readers. The full
+  build-loop snippet was not run.
+- **Item 16 of #20 was out of date**: Eli confirmed the gridlook group viewer renders (2026-11-19, recorded in
+  the HYCOM plan), so the skill calls it verified.
+- **Still labelled Unverified**: creating empty arrays without a manifest instead of a skeleton (planned in
+  HYCOM, not run). Update it once the full-record build reports.
+- **Left alone on purpose**: the wrong `to_icechunk(encoding=…)` snippets (#13) and the `chunks={}`/`_FillValue`
+  lessons (#14).
