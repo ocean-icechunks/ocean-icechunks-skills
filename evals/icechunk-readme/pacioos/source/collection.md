@@ -34,6 +34,11 @@ credits:
     text: >-
       built with [Icechunk](https://icechunk.io), [VirtualiZarr](https://virtualizarr.readthedocs.io)
       and [Xarray](https://xarray.dev), hosted on [Source Cooperative](https://source.coop/ocean-icechunks/pacioos).
+  - label: Tooling
+    text: >-
+      [ocean-icechunks-skills](https://github.com/ocean-icechunks/ocean-icechunks-skills), agent skills
+      for building and documenting Icechunk stores, by Eli Holmes, Rich Signell and
+      [other contributors](https://github.com/ocean-icechunks/ocean-icechunks-skills/graphs/contributors).
   - label: Viewer
     text: >-
       [gridlook](https://github.com/d70-t/gridlook), developed by Andrej Fast, Tobi Kölling, Fabian

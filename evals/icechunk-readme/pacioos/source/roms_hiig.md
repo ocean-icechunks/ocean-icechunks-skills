@@ -37,15 +37,12 @@ code:
     function: open_forecast
     docstring: Open the PacIOOS ROMS Hawaii forecast, best time series. `ref` is a branch or tag.
     concurrency: 128
-    chunks_advice: |-
-      For time series keep chunks=None (the default) or large dask chunks;
-      chunks={} is many times slower (one dask task per 230 KB chunk).
+    dask_example: The last example below does this; it needs `dask` (`pip install dask`).
 performance:
   rows:
     - {read: One surface map, chunks: 1, data_moved: 230 KB, time: 0.2 s}
     - {read: "One 3-D field, 36 levels", chunks: 36, data_moved: 8.3 MB, time: 0.8 s}
     - {read: "Point series, one depth, 5,497 steps", chunks: 5497, data_moved: 1.3 GB, time: 8.5 s}
-  open_time: about a second
   measured: '2026-11-14 from a JupyterHub, with `zarr.config.set({"async.concurrency": 128})` and `chunks=None`'
 provenance:
   built: 2026-11-14
@@ -106,6 +103,11 @@ series = ds.temp.sel(depth=0.25).sel(lat=21.2, lon=-157.9, method="nearest").sel
     time=slice("2025-01-01", "2025-12-31")).load()
 print(float(sst.mean()), float(series.mean()))
 print(series.forecast_reference_time.values[:10])
+
+# A July 2025 mean surface temperature map, with dask: subset first, then chunk the subset
+# (248 time steps in 31 tasks of 8)
+july = ds.temp.sel(depth=0.25, time=slice("2025-07-01", "2025-07-31")).chunk(time=8)
+mean_sst = july.mean("time").compute()
 ```
 
 ## Source files

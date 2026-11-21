@@ -2,8 +2,8 @@
 """Render README.md and docs/ files for a collection or a product from its source file.
 
 Needs Python 3.10+ and PyYAML; reads no store and makes no network request. Values the store
-knows (variables, coordinates, groups, snapshot, last update, global attributes, dates, NetCDF
-file counts) come from one JSON file per product in --auto DIR, named <product id>.json.
+knows (variables, coordinates, groups, snapshot, last update, global attributes, time range,
+source-file counts) come from one JSON file per product in --auto DIR, named <product id>.json.
 
     render_readme.py collection.md --auto auto/ --out out/pacioos/
     render_readme.py roms_hiig.md  --auto auto/ --out out/pacioos/roms_hiig/
@@ -29,6 +29,10 @@ LICENSES = {"Apache-2.0": "Apache License 2.0", "MIT": "MIT License",
             "BSD-3-Clause": "BSD 3-Clause License", "CC0-1.0": "CC0 1.0 Universal",
             "CC-BY-4.0": "Creative Commons Attribution 4.0"}
 LANGUAGES = {"python": "Python", "r": "R", "matlab": "MATLAB", "julia": "Julia"}
+FORMATS = {"netcdf": "NetCDF", "hdf5": "HDF5", "grib": "GRIB", "zarr": "Zarr"}
+# Shown above the first call to the loader unless code.python.chunks_advice replaces it.
+CHUNKS_ADVICE = ("Large Icechunk stores hold many chunk references. Open with chunks=None (the default),\n"
+                 "subset, then call .chunk() on the subset if the work uses dask.")
 INHERITED = ("provider", "repository", "code_license", "source_coop")
 
 
@@ -146,6 +150,16 @@ def viewer_link(base, store_url, variable, view):
     return f"{base}#icechunk+{store_url}::varname={variable}::{view}"
 
 
+def browse_url(url):
+    """Source Coop browse page for a data.source.coop URL; a browser gets 404 from the data URL."""
+    return re.sub(r"^https://data\.source\.coop/", "https://source.coop/", url)
+
+
+def time_coverage(auto):
+    tr = auto.get("time_range") or []
+    return f"{tr[0]} to {tr[1]}" if len(tr) == 2 else ""
+
+
 def short_title(title):
     return title.split(":")[0].strip()
 
@@ -238,15 +252,19 @@ def render_collection(source, auto_dir, products_dir, out):
         if errors:
             continue
         r, readme_url = p["row"], f"{web}/{pid}/README.md"
-        data = []
-        if auto.get("netcdf"):
-            nc = auto["netcdf"]
-            data.append(f"**NetCDF:** `{nc['path']}`, {nc['files']:,} files, {nc['size']}")
+        data, files_link = [], ""
+        sf = auto.get("source_files")
+        if sf:
+            fmt = sf.get("format", "files")
+            data.append(f"**{FORMATS.get(fmt, fmt)}:** `{sf['path']}`, {sf['files']:,} files, {sf['size']}")
+            files_link = f"[{fmt}]({web}/{sf['path'].rstrip('/')})"  # Source Coop redirects a trailing slash
         data.append(f"**Icechunk:** `{p['store_url']}`" + (f", {r['store_note']}" if r.get("store_note") else ""))
+        if auto.get("last_update"):
+            data.append(f"Updated {auto['last_update']}")
         rows.append([f"**{r['name']}** (`{pid}`), {r['detail']}", f"[README]({readme_url})",
-                     auto.get("dates", ""), "<br>".join(data)])
+                     time_coverage(auto), "<br>".join(data)])
         code = ", ".join(f"[{LANGUAGES.get(lang, lang)}]({readme_url}#user-content-{lang})" for lang in p["code"])
-        cells = [r["short_name"]]
+        cells = [r["short_name"], f"[icechunk]({browse_url(p['store_url'])})", files_link]
         if viewer:
             v = p["viewer"]
             cells.append(f"[{viewer['name']}]({viewer_link(viewer['url'], p['store_url'], v['variable'], v['view'])})")
@@ -263,9 +281,9 @@ def render_collection(source, auto_dir, products_dir, out):
         " · ".join(header),
         readme["Summary"],
         readme.get("Caveats", ""),
-        table([f"Dataset ({provider['name']} id)", "About", "Dates", "Data"], rows),
+        table([f"Dataset ({provider['name']} id)", "About", "Time coverage", "Data"], rows),
         "## Data access",
-        table(["Dataset"] + (["Viewer"] if viewer else []) + ["Code"], access),
+        table(["Dataset", "Store", "Data files"] + (["Viewer"] if viewer else []) + ["Code"], access),
         "## Citation and reuse",
         readme.get("Citation") or data_citation(provider, "the NetCDF copies or the Icechunk stores"),
         code_paragraph(front["code_license"], front["repository"], plural=True),
@@ -309,15 +327,17 @@ def python_section(p, examples):
              "    session = repo.readonly_session(tag=ref) if ref in tags else repo.readonly_session(ref)",
              "    return xr.open_zarr(session.store, consolidated=False, chunks=chunks)",
              "", ""]
-    if py.get("chunks_advice"):
-        code += [f"# {line}" for line in py["chunks_advice"].strip().splitlines()]
+    code += [f"# {line}" for line in (py.get("chunks_advice") or CHUNKS_ADVICE).strip().splitlines()]
     code += [f"ds = {fn}()", "print(ds)"]
-    opening = p.get("performance", {}).get("open_time")
+    subset = ("**Subset, then chunk.** A large store holds many chunk references, and `chunks={}` "
+              "makes one dask task for each, which is slow. Open with `chunks=None`, select what you "
+              "need, then call `.chunk()` on the selection if the work uses dask.")
+    if py.get("dask_example"):
+        subset += f" {py['dask_example'].strip()}"
     return "\n\n".join(x for x in [
         "### Python", intro, extra, f"```bash\n{py['pip']}\n```",
         "**Open the dataset in xarray**", "```python\n" + "\n".join(code) + "\n```",
-        f"Opening takes {opening} and reads only metadata." if opening else "",
-        "**Example analyses**", examples] if x)
+        subset, "**Example analyses**", examples] if x)
 
 
 def variables_section(p, auto, readme):
@@ -424,6 +444,7 @@ def render_product(source, auto_dir, out):
         " · ".join(header),
         readme["Summary"],
         f"```\n{p['store_url']}\n```",
+        f"Updated {auto['last_update']}.",
         readme.get("Notes", ""),
         variables_section(p, auto, readme),
         "## Data access (code)\n\n" + python_section(p, readme["Example analyses"]),

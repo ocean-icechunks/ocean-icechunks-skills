@@ -34,7 +34,8 @@ code:
     function:                # loader name, e.g. open_forecast
     docstring:               # one line
     concurrency:             # zarr async.concurrency the timings used, e.g. 128
-    chunks_advice:           # optional comment above the first call
+    chunks_advice:           # optional: replaces the standard "open with chunks=None, subset, then chunk" comment
+    dask_example:            # sentence pointing to the example that subsets then chunks, e.g. The last example below does this.
 access:                      # only when reads are NOT anonymous public HTTPS
   auth:                      # credentials needed, and how to get them
   region:                    # compute-region or network limits
@@ -42,7 +43,6 @@ performance:                 # measured, never estimated
   rows:                      # {read, chunks, data_moved, time}
     -
   measured:                  # when, where and with which settings
-  open_time:                 # optional, e.g. about a second
 provenance:
   built:                     # date of the first build
   build_script:              # e.g. build_store.py
@@ -81,7 +81,8 @@ extra_sections:              # escape hatch, only when no field fits; say why
 ## Example analyses
 
 <!-- Required. One code block per language, run against the store; a comment on each step.
-     It follows the generated loading code, so `ds` already exists. -->
+     It follows the generated loading code, so `ds` already exists. Include one example that
+     subsets and then calls .chunk(), and point to it with code.python.dask_example. -->
 
 ## Source files
 

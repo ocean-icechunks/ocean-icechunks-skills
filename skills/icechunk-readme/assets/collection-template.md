@@ -31,6 +31,11 @@ credits:                     # {label, text}; Markdown allowed in text
     text:
   - label: Icechunk packaging
     text:
+  - label: Tooling           # keep; add contributors after Rich Signell in contribution order
+    text: >-
+      [ocean-icechunks-skills](https://github.com/ocean-icechunks/ocean-icechunks-skills), agent skills
+      for building and documenting Icechunk stores, by Eli Holmes, Rich Signell and
+      [other contributors](https://github.com/ocean-icechunks/ocean-icechunks-skills/graphs/contributors).
 netcdf_layout:               # optional, e.g. <dataset>/netcdf/[<version>/]<year>/<file>.nc
 ---
 

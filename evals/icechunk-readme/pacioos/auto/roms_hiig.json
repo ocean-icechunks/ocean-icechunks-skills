@@ -1,7 +1,11 @@
 {
- "_comment": "Frozen values the render script would read from the store (slice 3). Test fixture, taken from the hand-made expected files.",
- "dates": "2025-01-01 to 2026-11-17",
- "netcdf": {
+ "_comment": "Frozen values the render script would read from the store (slice 3). Test fixture, time_range, last_update and snapshot read from the public store on 2026-11-21; the rest taken from the hand-made expected files.",
+ "time_range": [
+  "2025-01-01",
+  "2026-11-25"
+ ],
+ "source_files": {
+  "format": "netcdf",
   "path": "roms_hiig/netcdf/",
   "files": 657,
   "size": "1.25 TB"
@@ -82,9 +86,9 @@
   "/": [
    {
     "name": "time",
-    "size": 5537,
-    "as_of": "2026-11-18",
-    "values": "2025-01-01T00Z to 2026-11-24T21Z"
+    "size": 5545,
+    "as_of": "2026-11-19",
+    "values": "2025-01-01T00Z to 2026-11-25T00Z"
    },
    {
     "name": "forecast_reference_time",

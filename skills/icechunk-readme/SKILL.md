@@ -72,7 +72,7 @@ python3 scripts/render_readme.py <product>.md  --auto auto/ --out <collection>/<
 ```
 
 - `--auto` is a directory of `<product id>.json` files with the values the store
-  knows: `dates`, `netcdf`, `groups`, `variables`, `coordinates`, `snapshot`,
+  knows: `time_range`, `source_files`, `groups`, `variables`, `coordinates`, `snapshot`,
   `last_update`, `store_attributes`, `netcdf_attributes`. Until the script reads
   them from the store, fill them from the store with xarray and Icechunk, never
   from an old README.
