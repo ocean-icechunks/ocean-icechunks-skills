@@ -61,8 +61,9 @@ Reviewed 2026-11-21; all are under two weeks old.
   (two places the skill is wrong; one is #13). Mark that note harvested once #13/#14 land.
 - **#3** append alignment: decisions made, no skill edits; waits on Eli's upstream VirtualiZarr issue
   (drafted, not posted). [append-alignment-issue-21.md](../docs/design/append-alignment-issue-21.md).
-- **#21** standardized READMEs: layout settled by hand from Eli's markups (2026-11-21), template not built.
-  [readme-layout.md](../docs/design/readme-layout.md); examples in `evals/virtual-icechunk/readme-examples/`.
+- **#21** standardized READMEs: layout settled by hand (2026-11-21); new skill `icechunk-readme` has the
+  schema and source templates (slice 1 of 4); render script next. [readme-layout.md](../docs/design/readme-layout.md);
+  example source and expected output in `evals/icechunk-readme/pacioos/`.
   Overlaps **#19** (documentation bundle), whose files now go in per-level `docs/` folders.
 - **#27** skill rule for s3:// vs https://: waits on earth-mover/icechunk#2571.
 - **#10** lessons from other playbooks: backlog; Eli's open question is whether keeping stores current is in scope.
