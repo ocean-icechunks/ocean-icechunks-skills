@@ -104,7 +104,7 @@ What a later session needs to know, beyond the diff:
 
 ## s3:// vs https:// references: investigated (#27, 2026-11-19..20)
 
-Branch `s3-vs-https-investigation` (pushed, no PR yet); everything is in
+Merged in #28 (2026-11-20); everything is in
 [docs/design/s3-vs-https/README.md](../docs/design/s3-vs-https/README.md). In one line: `s3_store` is
 2–7× slower than `http_store` on endpoints that offer HTTP/2 (Source Coop, GCS, OSN) because the Rust AWS
 SDK negotiates HTTP/2 and hyper's HTTP/2 is slow; filed as earth-mover/icechunk#2571. Decisions (Eli):
@@ -115,7 +115,7 @@ it is an Icechunk issue, nothing goes to Source Coop; keep the test stores in
 ## Open threads
 
 - **s3:// vs https:// in the skill, #27**: decide the skill rule once earth-mover/icechunk#2571 has an answer,
-  then PR the branch (README + scripts + results) and update `references/source-patterns.md` and
+  then update `references/source-patterns.md` and
   `learn-and-evolve.md`. The design note is the folder README; there is no separate note yet.
 
 - **Standardized READMEs, #21** (opened 2026-11-19, not started): the product and store
