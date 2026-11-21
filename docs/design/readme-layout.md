@@ -170,7 +170,25 @@ the collection tables need.
 
 ## Open
 
-- Slice 3: write the `auto/` JSON from the store (anonymous reads only).
+- Slice 3: write the `auto/` JSON from the store (anonymous reads only). See "Slice 3 plan" below.
+- The hand-written source text (e.g. roms_hiig "Source files": 657 runs to 2026-11-17) and the
+  frozen file counts are already stale. Eli: refresh them when this work is finished and the new
+  READMEs are posted, not before.
 - The collection's "The Icechunk stores" section carries hand-written coverage dates; they go stale like the product snapshot did.
 - The other PacIOOS products and `noaa-ohc` have not been marked up; expect small additions
   (e.g. `ww3_hawaii`'s "Steps to treat with care").
+
+## Slice 3 plan (agreed with Eli, 2026-11-21; not started)
+
+- A separate script, `collect_auto.py`, reads each store and its source-file prefix and writes the
+  `<product id>.json` that `render_readme.py --auto` takes. The render script stays offline, so its
+  tests keep working and a README can be re-rendered without reading the stores again.
+- Read-only and anonymous over HTTPS: `time_range` (first and last time value, dates),
+  `last_update` and `snapshot` (main's latest snapshot), `groups`, `variables`, `coordinates`,
+  `store_attributes`, and `source_files` (format from the extension, path, count, size). Optionally
+  `netcdf_attributes` from the newest file.
+- New dependencies, `icechunk`, `xarray` and `zarr`, go in `evals/icechunk-readme/requirements.txt`
+  (and say so in SKILL.md); check whether plain HTTP can list the bucket before adding a package.
+- Tests run against the live PacIOOS stores and check structure, not exact dates (the stores update
+  daily). Run the whole eval in a clean venv (`/srv/conda/bin/python3.12 -m venv`); it was never
+  run for slice 2 (permission check refused it) and Eli folded it into slice 3.
