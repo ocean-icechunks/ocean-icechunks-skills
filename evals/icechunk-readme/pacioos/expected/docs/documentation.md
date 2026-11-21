@@ -1,7 +1,7 @@
 # PacIOOS Hawaiʻi ocean, wave and weather models: documentation
 
-Technical detail for the [PacIOOS product](https://source.coop/ocean-icechunks/pacioos): how the
-stores work, how to reach the NetCDF copies directly, known problems, and how it was all built.
+Technical detail for the [`pacioos` collection](https://source.coop/ocean-icechunks/pacioos).
+The README has what most readers need; this page has the rest.
 
 ## About the data
 

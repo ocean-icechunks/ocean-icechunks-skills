@@ -49,11 +49,6 @@ netcdf_layout: <dataset>/netcdf/[<version>/]<year>/<file>.nc
 Model output from the [Pacific Islands Ocean Observing System (PacIOOS)](https://www.pacioos.hawaii.edu)
 for the main Hawaiian Islands.
 
-## Citation
-
-**The data are PacIOOS's.** Any use of the NetCDF copies or the Icechunk stores should cite
-PacIOOS, as described at <https://www.pacioos.hawaii.edu/data-services/>.
-
 # Documentation
 
 ## About the data

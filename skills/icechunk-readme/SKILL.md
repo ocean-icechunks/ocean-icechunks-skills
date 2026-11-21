@@ -6,9 +6,9 @@ description: Write the README and documentation files for a published collection
 # Icechunk README: collection and product
 
 **Status: Experimental, in progress.** The layout was settled by hand on one
-collection (PacIOOS, Source Cooperative, November 2026). The field schema and
-source templates exist; the render script does not yet. Until it does, write
-the files by hand to the shape of the worked example and say so.
+collection (PacIOOS, Source Cooperative, November 2026). The render script works
+offline only: it does not yet read values from the store, so they are supplied
+as a JSON file per product (see "Render"). Say so when you use it.
 
 ## Two levels
 
@@ -59,3 +59,27 @@ READMEs are shown by Source Cooperative and by GitHub. Both strip `style`,
 Cooperative a link to a heading on another page needs the `user-content-`
 prefix (`README.md#user-content-python`). GitHub's `> [!NOTE]` alerts do not
 render on Source Cooperative.
+
+## Render
+
+`scripts/render_readme.py` (Python 3.10+, PyYAML) turns a source file into the
+README and `docs/` files. It makes no network request and never writes to a
+store or bucket.
+
+```bash
+python3 scripts/render_readme.py collection.md --auto auto/ --out <collection>/
+python3 scripts/render_readme.py <product>.md  --auto auto/ --out <collection>/<product>/
+```
+
+- `--auto` is a directory of `<product id>.json` files with the values the store
+  knows: `dates`, `netcdf`, `groups`, `variables`, `coordinates`, `snapshot`,
+  `last_update`, `store_attributes`, `netcdf_attributes`. Until the script reads
+  them from the store, fill them from the store with xarray and Icechunk, never
+  from an old README.
+- A missing required field or section fails the render with exit status 1 and a
+  list of every problem; nothing is written.
+- Rendering a collection reads each product's source file for its table row,
+  so a product needs at least `row`, `store_url`, `viewer` and `code` before
+  its full README is written.
+- Render into a scratch directory and compare before replacing a published file.
+

@@ -30,7 +30,8 @@ collection:
                        description: "Who owns the source data.",
                        fields: {name: "short name, e.g. PacIOOS", long_name: "full name", url: "home page",
                                 data_services_url: "provider's own data access page (header link)",
-                                data_services_label: "header link text, e.g. 'Data access (PacIOOS)'"}}
+                                data_services_label: "header link text, e.g. 'Data access (PacIOOS)'",
+                                citation_url: "optional: page saying how to cite the data; defaults to data_services_url"}}
     viewer:           {required: false, source: person, used_in: [README, documentation],
                        description: "The one browser viewer for the collection.",
                        fields: {name: "link text, e.g. Gridlook", url: "viewer index.html",
@@ -46,7 +47,7 @@ collection:
   body:
     "# README":
       "## Summary":        {required: true,  description: "One or two sentences: what the data are and who makes them. The README shows only this."}
-      "## Citation":       {required: true,  description: "How to cite the data. Products inherit it."}
+      "## Citation":       {required: false, description: "Replaces the generated data citation ('The data are <provider>'s. Any use ... should cite <provider>, as described at <citation_url>.'). Products always use the generated sentence plus citation_extra."}
       "## Caveats":        {required: false, description: "Known gaps a reader must see before using the data."}
     "# Documentation":     {required: true,  description: "Free sections in order, rendered to docs/documentation.md. Recommended headings: About the data; The Icechunk stores; The viewer; NetCDF copies; Known problems in the files; How this was built."}
   auto:
@@ -91,11 +92,12 @@ product:
                        fields: {auth: "", region: ""}}
     performance:      {required: true,  source: person, used_in: [README],
                        description: "Measured reads; never estimated.",
-                       fields: {rows: "list of {read, chunks, data_moved, time}", measured: "when, where and with which settings"}}
+                       fields: {rows: "list of {read, chunks, data_moved, time}", measured: "when, where and with which settings",
+                                open_time: "optional, e.g. 'about a second'; rendered after the loading code"}}
     provenance:       {required: true,  source: person, used_in: [README],
                        fields: {built: "date of the first build", build_script: "e.g. build_store.py", build_url: "link to it in the repository",
                                 tested_with: "package versions the README code was run with, e.g. icechunk 2.3.1, xarray 2026.9.0, Python 3.12",
-                                build_files: "list of file names in docs/",
+                                build_files: "list of file names in docs/; an entry may be {file, label} to say what it is",
                                 how_made: "{file, url} of how_store_created.md", plan: "{label, url} of the planning issue"}}
     citation_extra:   {required: false, source: person, used_in: [README], description: "Added after the inherited citation, e.g. who runs the model."}
     metadata:         {required: false, source: person, used_in: [metadata],
@@ -123,4 +125,4 @@ product:
     snapshot:         {from: "store: the snapshot main points at, and its time", used_in: [README, metadata]}
     last_update:      {from: "store: time of that snapshot", used_in: [README]}
     store_attributes: {from: "store: root group attributes", used_in: [metadata]}
-    netcdf_attributes: {from: "latest NetCDF copy by filename date, when metadata.netcdf_attributes is true", used_in: [metadata]}
+    netcdf_attributes: {from: "latest NetCDF copy, when metadata.netcdf_attributes is true: {file, url, selected_by, attributes}", used_in: [metadata]}

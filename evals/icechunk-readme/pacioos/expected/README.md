@@ -27,7 +27,9 @@ for the main Hawaiian Islands.
 PacIOOS, as described at <https://www.pacioos.hawaii.edu/data-services/>.
 
 **The code** that copied the files and built the stores was written by E. E. Holmes and is
-released under the Apache License 2.0. It can be used without attribution.
+released under the Apache License 2.0 at
+[ocean-icechunks/pacioos](https://github.com/ocean-icechunks/pacioos). It can be used without
+attribution.
 
 ## Credits
 

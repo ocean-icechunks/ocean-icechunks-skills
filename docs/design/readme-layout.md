@@ -1,6 +1,6 @@
 # README layout for collections and products (#21)
 
-Status: **design settled by hand, 2026-11-21; schema and source templates in `skills/icechunk-readme/` (slice 1); render script not yet built.** Part of #21.
+Status: **design settled by hand, 2026-11-21; schema and templates (slice 1) and an offline render script (slice 2) in `skills/icechunk-readme/`; reading values from the store (slice 3) not built.** Part of #21.
 
 Issue #21 planned templates first (phase 1) and designs after (phase 2). Eli reversed that: she
 printed two live PacIOOS READMEs, marked them up by hand, and the agent redrafted from the
@@ -127,9 +127,33 @@ the second table); **Latest completed NetCDF copy** → same; the **per-variable
 "Where the metadata came from" and "Steps to treat with care" are not yet mapped (product not
 marked up); the first fits a documentation section, the second probably `## Caveats`.
 
+## Slice 2: what the render script changed (2026-11-21)
+
+The script reproduces the hand-made files in `evals/icechunk-readme/pacioos/expected/` except for
+line wrapping (the test joins wrapped lines; the rendered page is the same). Making the two levels
+consistent changed three things in the expected files:
+
+- The collection's code-license paragraph now names the repository, as the product's does.
+- The collection `documentation.md` opens with the same sentence shape as the product's
+  ("Technical detail for the `pacioos` collection. The README has what most readers need; this
+  page has the rest."). The old sentence also said "PacIOOS product", from before the terms changed.
+- The product README's last update and snapshot now come from the same store values as
+  `metadata.md` (2026-11-19, `XDCV…`). The hand-made README had `XA93…`, a day stale: the bug
+  rule 2 exists for.
+
+Schema additions: `performance.open_time` (the "Opening takes about a second" line),
+`provenance.build_files` entries may be `{file, label}`, `provider.citation_url`; the collection's
+`## Citation` is now optional, defaulting to a generated sentence. The test also caught that YAML
+reads ` #` as a comment (`label: issue #10` became `issue`); the templates now warn about it.
+
+Three partial product source files (`roms_hiig_reanalysis`, `wrf_hi`, `ww3_hawaii`) hold only what
+the collection tables need. Their `dates` in `auto/` are copied from the hand-made README, which
+mixes two meanings: the ROMS forecast row gives the last NetCDF run (2026-11-17) while the WRF row
+gives the end of the forecast (2026-11-22). Slice 3 has to pick one.
+
 ## Open
 
-- Render script (slice 2): reproduce `expected/` from `source/`. It needs source files for the other three PacIOOS products, at least their `row`, `store_url` and `viewer`, to render the collection tables.
+- Slice 3: write the `auto/` JSON from the store (anonymous reads only), and decide what `dates` means.
 - The collection's "The Icechunk stores" section carries hand-written coverage dates; they go stale like the product snapshot did.
 - The other PacIOOS products and `noaa-ohc` have not been marked up; expect small additions
   (e.g. `ww3_hawaii`'s "Steps to treat with care").

@@ -1,0 +1,9 @@
+{
+ "_comment": "Frozen collection-table values for a product without a full source file yet. Test fixture.",
+ "dates": "2017-08-16 to 2026-11-22",
+ "netcdf": {
+  "path": "wrf_hi/netcdf/",
+  "files": 3041,
+  "size": "0.46 TB"
+ }
+}
