@@ -13,6 +13,7 @@ row:                         # this product's row in the collection tables
   detail:                    # e.g. daily runs
   short_name:                # e.g. ROMS forecast, best time series
   store_note:                # optional, e.g. best time series
+  time_coverage:             # optional: replaces the Time coverage cell when the store has no time axis
 store_url:                   # public HTTPS URL of the Icechunk store
 netcdf_url:                  # optional: public prefix of the NetCDF copies
 provider_page:               # optional header link
@@ -28,6 +29,7 @@ coordinate_notes:            # optional: name -> plain-language Values cell, rep
 order:                       # optional: row order the store does not keep
   variables:                 # e.g. [temp, salt, u, v, zeta, mask]
   coordinates:               # e.g. [time, depth, lat, lon]
+  groups:                    # e.g. [/daily, /monthly]
 variable_notes:              # optional: name -> text when a variable has no standard_name
 code:
   python:

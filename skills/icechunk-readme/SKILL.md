@@ -6,8 +6,9 @@ description: Write the README and documentation files for a published collection
 # Icechunk README: collection and product
 
 **Status: Experimental, in progress.** The layout was settled by hand on one
-collection (PacIOOS, Source Cooperative, November 2026), and the scripts have
-been run only on its four stores. Say so when you use them.
+collection (PacIOOS, Source Cooperative, November 2026). The scripts were also
+run on HYCOM, CoastWatch OHC, GOBAI-O2, OA indicators and OISST; several
+PacIOOS assumptions remain (see the design note). Say so when you use them.
 
 ## Two levels
 
@@ -77,8 +78,13 @@ python3 scripts/collect_auto.py <product>.md  --out auto/     # one product
 
 - `source_files` and `netcdf_attributes` come from the product's `netcdf_url`.
   The store cannot supply that prefix, because its virtual chunk container is
-  usually the whole collection. Without `netcdf_url` they are left out, and the
-  script says so.
+  usually the whole collection or the provider's host. It must answer an S3
+  listing (Source Cooperative, an AWS bucket, `s3://`). A plain web server
+  (CoastWatch, NCEI) cannot be listed, so they are left out, and the script
+  says so.
+- `s3://` virtual chunk containers are opened with anonymous S3 credentials, and
+  the README's loader is written to match. A materialized store gets no
+  credentials, and a store whose arrays are in groups gets a `group` argument.
 - The newest file is chosen by the date in its name, or by last-modified time
   when a name has no date. NetCDF-3 headers are parsed directly; NetCDF-4 files
   need `h5py`.
@@ -88,7 +94,8 @@ python3 scripts/collect_auto.py <product>.md  --out auto/     # one product
   unless the source has its own `## Source file format` section or places it
   with `{{source_formats}}`.
 - Variables are listed by rank, then name, because the store keeps no stable
-  order. Set `order` in the product source to choose the order.
+  order. Set `order` (`variables`, `coordinates`, `groups`) in the product
+  source to choose it; the first group listed is the loader's default.
 - The JSON is never edited by hand. Rerun the script instead.
 
 `scripts/render_readme.py` (Python 3.10+, PyYAML) turns a source file and that

@@ -227,5 +227,48 @@ the collection tables need.
   "A virtual store" unless the source has its own `## Source file format` section.
 - **Timing:** all four stores and listings in about 11 s on the hub.
 - **Clean run:** a venv from `$NB_PYTHON_PREFIX/bin/python` (3.13 on this hub) with only
-  `evals/icechunk-readme/requirements.txt`: `test_render.py` 14/14, `test_collect.py` 8/8.
+  `evals/icechunk-readme/requirements.txt`: `test_render.py` 17/17, `test_collect.py` 12/12 (after the other-collections round).
+
+## Other collections (run 2026-11-21)
+
+Eli: run the scripts on the other stores to find what PacIOOS hid. Trial sources were throwaway
+copies of `roms_hiig.md` (prose wrong, code paths real) in a scratch directory; nothing was written
+to `~/hycom`, `~/icechunks` or any store. Stores: `hycom/hycom-gofs-3pt1-reanalysis`,
+`noaa-ohc/{na,np,sp}`, `fish-pace/gobai-o2/monthly`, `oa-indicators/climatology`,
+`noaa-oisst/oisst.icechunk`.
+
+Fixed:
+
+- **`s3://` containers** (OISST): `HttpAccess` is refused; the collector and the README loader use
+  `icechunk.containers_credentials` with `s3_anonymous_credentials()`. The loader keeps the plain
+  form when every container is HTTPS (PacIOOS unchanged) and drops the lines for a materialized
+  store (GOBAI-O2). The rendered OISST, GOBAI-O2 and OHC loaders were run and read data.
+- **Arrays only in groups** (OHC, OISST): the loader gains `group=` (first of `order.groups`), or it
+  opens an empty root. Groups sort alphabetically (`14day`, `14day_v1`, `daily`), so `order.groups`.
+- **Attributes per group, none at the root** (OHC, OISST): `group_attributes`, one table per group in
+  metadata.md; an empty `store_attributes` is allowed.
+- **`time_range` over every group**: OHC's groups are eras; the first group alone said 2025.
+- **No time axis** (OA indicators, a climatology): optional `row.time_coverage`.
+- **Source files outside the collection**: AWS buckets (HYCOM `https://<bucket>.s3.<region>.amazonaws.com/`,
+  OISST `s3://`) list fine; `path` is then the full URL and the table links the HTTPS form. HYCOM's
+  63,341 files list in ~17 s. CoastWatch and NCEI are plain web servers: left out, with a message.
+- **Newest file by name** missed `YYYYMMDDHH` (HYCOM); now 8, 10 or 12 digits, ties by name (t021 after t000).
+- **Format sample capped at 40 files**: OISST has 543 monthly folders. Sizes under 0.1 TB print in GB
+  (OISST 28 GB was "0.03 TB"). Scalar CF variables (`crs`) show "scalar" for dimensions.
+
+Open, for Eli:
+
+- **Where a product's README goes.** The renderer links `<collection>/<id>/README.md` and `docs/`.
+  PacIOOS keeps the store one level down (`<id>/icechunk`); OHC, HYCOM and GOBAI-O2 *are* the
+  product folder (the README would sit inside the Icechunk repository prefix), HYCOM publishes its
+  docs at `hycom/docs/<dataset>/`, and OISST has one store, `oisst.icechunk`, at the collection root.
+- **"Copies" wording.** "The code that copied the files", "the NetCDF copies" and "Latest completed
+  NetCDF copy" are true only where the files were copied (PacIOOS). HYCOM, OHC, OISST and OA
+  reference the provider's own files.
+- **Unlistable sources** (CoastWatch, NCEI): the store's own references could give the file count
+  (every virtual chunk location), at a cost not yet measured on a large store.
+- `coordinate_notes` is keyed by name across groups; OISST `time` means days in `daily`, months in
+  `monthly`.
+- `netcdf_url` is also used for HDF5 sources; the name fits PacIOOS only.
+- OISST is built by NERACOOS/GMRI (ocean-icechunks/noaa_oisst); a README there may be another tool's.
 

@@ -83,6 +83,7 @@ class Offline(unittest.TestCase):
         self.assertEqual(collect.size_text(1.25e12), "1.25 TB")
         self.assertEqual(collect.size_text(4.6e11), "0.46 TB")
         self.assertEqual(collect.size_text(3e9), "3.00 GB")
+        self.assertEqual(collect.size_text(2.832e10), "28.32 GB")
 
     def test_newest(self):
         data = [("a/2026/x_20261118.nc", 1, "2026-11-19T00:00:00Z"),
@@ -91,10 +92,25 @@ class Offline(unittest.TestCase):
         data.append(("a/extra.nc", 1, "2026-11-21T00:00:00Z"))
         self.assertEqual(collect.newest(data), ("a/extra.nc", "last modified"))
 
-    def test_netcdf_url_outside_collection(self):
-        with self.assertRaises(collect.CollectError):
-            collect.source_files("https://data.source.coop/other/x/netcdf/",
-                                 "https://data.source.coop/ocean-icechunks/pacioos")
+    def test_split_s3_url(self):
+        self.assertEqual(collect.split_s3_url("https://data.source.coop/ocean-icechunks/pacioos/wrf_hi/netcdf/"),
+                         ("https://data.source.coop/ocean-icechunks", "ocean-icechunks", "pacioos/wrf_hi/netcdf/"))
+        self.assertEqual(collect.split_s3_url("https://hycom-gofs-3pt1-reanalysis.s3.us-west-2.amazonaws.com/1994/"),
+                         ("https://hycom-gofs-3pt1-reanalysis.s3.us-west-2.amazonaws.com",
+                          "hycom-gofs-3pt1-reanalysis", "1994/"))
+        self.assertEqual(collect.split_s3_url("s3://noaa-bucket/data/v2.1/avhrr/"),
+                         ("https://noaa-bucket.s3.amazonaws.com", "noaa-bucket", "data/v2.1/avhrr/"))
+
+    def test_relative(self):
+        base = "https://data.source.coop/ocean-icechunks/pacioos"
+        self.assertEqual(collect.relative(base + "/wrf_hi/netcdf/", base), "wrf_hi/netcdf/")
+        self.assertEqual(collect.relative("s3://other/x/", base), "s3://other/x/")
+
+    def test_newest_hourly_names(self):
+        data = [("1994/hycom_GLBv0.08_530_1994010112_t000.nc", 1, "2020-08-18T00:00:00Z"),
+                ("2015/hycom_GLBv0.08_539_2015123012_t000.nc", 1, "2020-08-17T00:00:00Z"),
+                ("2015/hycom_GLBv0.08_539_2015123012_t021.nc", 1, "2020-08-16T00:00:00Z")]
+        self.assertEqual(collect.newest(data), ("2015/hycom_GLBv0.08_539_2015123012_t021.nc", "filename date"))
 
 
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -167,6 +183,23 @@ class Live(unittest.TestCase):
         self.assertEqual(status, 0, err)
         readme = (out / "roms_hiig/README.md").read_text(encoding="utf-8")
         self.assertIn(self.read("roms_hiig")["snapshot"], readme)
+
+    def test_other_hosts(self):
+        """Outside Source Cooperative: an AWS bucket lists; a plain web server cannot be listed."""
+        endpoint, objects = collect.list_prefix("https://hycom-gofs-3pt1-reanalysis.s3.us-west-2.amazonaws.com/1994/")
+        self.assertGreater(len(objects), 1000)  # more than one page
+        self.assertTrue(all(k.startswith("1994/") for k, _, _ in objects))
+        with self.assertRaises(collect.NotListable):
+            collect.list_prefix("https://coastwatch.noaa.gov/pub/socd/lsa/heat-content/")
+
+    def test_s3_container_and_groups(self):
+        """noaa-oisst: an s3:// container, arrays only in groups, materialized monthly group."""
+        auto = collect.collect({"store_url": "https://data.source.coop/ocean-icechunks/noaa-oisst/oisst.icechunk"},
+                               "https://data.source.coop/ocean-icechunks/noaa-oisst")
+        self.assertEqual(auto["virtual_chunk_containers"], ["s3://noaa-cdr-sea-surface-temp-optimum-interpolation-pds/"])
+        self.assertEqual(auto["groups"], ["/daily", "/monthly"])
+        self.assertEqual(set(auto["group_attributes"]), {"/daily", "/monthly"})
+        self.assertEqual(auto["time_range"][0], "1981-09-01")
 
     def test_hdf5_attributes(self):
         """wrf_hi files are NetCDF-4/HDF5, unlike roms_hiig's NetCDF-3, so h5py reads them."""

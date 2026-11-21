@@ -65,9 +65,10 @@ product:
     row:              {required: true,  source: person, used_in: [collection],
                        description: "This product's row in the collection tables.",
                        fields: {name: "e.g. ROMS ocean forecast", detail: "e.g. daily runs; 3-hourly, ~4 km, 36 depths",
-                                short_name: "e.g. ROMS forecast, best time series", store_note: "e.g. best time series"}}
+                                short_name: "e.g. ROMS forecast, best time series", store_note: "e.g. best time series",
+                                time_coverage: "optional: replaces the Time coverage cell, for a store with no time axis, e.g. 'climatology, 1993 to 2021'"}}
     store_url:        {required: true,  source: person, used_in: [README], description: "Public HTTPS URL of the Icechunk store."}
-    netcdf_url:       {required: false, source: person, used_in: [documentation], description: "Public prefix of the NetCDF copies the store references; collect_auto.py lists it for source_files and netcdf_attributes. Needed for the collection's Data column."}
+    netcdf_url:       {required: false, source: person, used_in: [documentation], description: "Public prefix of the source files the store references (NetCDF or HDF5); collect_auto.py lists it for source_files and netcdf_attributes. Must answer an S3 listing: data.source.coop, an AWS bucket (https://<bucket>.s3.amazonaws.com/ or s3://), OSN. A plain web server (CoastWatch, NCEI) cannot be listed, and source_files is left out."}
     provider_page:    {required: false, source: person, used_in: [README], fields: {label: "e.g. PacIOOS dataset page", url: ""}}
     viewer:           {required: "if the collection has a viewer", source: person, used_in: [README, documentation, collection],
                        description: "Opening view; the link is built from the collection viewer URL, store_url and these.",
@@ -79,7 +80,8 @@ product:
                        description: "Map of coordinate name to a plain-language Values cell, replacing the auto range, e.g. time: '2025-01-01T00Z to 7 days after the newest run, every 3 hours'."}
     order:            {required: false, source: person, used_in: [README],
                        description: "Row order of the Variables and Coordinates tables, which the store does not keep. Names listed come first, in this order; the rest follow by rank, then name. A name the store lacks fails the render.",
-                       fields: {variables: "e.g. [temp, salt, u, v, zeta, mask]", coordinates: "e.g. [time, forecast_reference_time, forecast_period, depth, lat, lon]"}}
+                       fields: {variables: "e.g. [temp, salt, u, v, zeta, mask]", coordinates: "e.g. [time, forecast_reference_time, forecast_period, depth, lat, lon]",
+                                groups: "e.g. [/daily, /14day_v1, /14day]; also the order of the group tables in metadata"}}
     variable_notes:   {required: false, source: person, used_in: [README],
                        description: "Map of variable name to text for the Standard name cell when it has none, e.g. mask."}
     code:             {required: true,  source: person, used_in: [README],
@@ -121,13 +123,15 @@ product:
       "## Example analyses": {required: true,  description: "One code block per language, run against the store, each step with a comment. One example subsets and then calls .chunk(); code.python.dask_example points to it."}
       "## Source files":     {required: true,  description: "One paragraph: what the files are, how they were copied, coverage and gaps."}
       "## Caveats":          {required: false, description: "Known gaps or anything unverified a reader must see in the README."}
-    "# Documentation":       {required: true,  description: "Free sections in order, rendered to docs/documentation.md. The placeholder {{viewer_fields_table}} is replaced by the per-variable viewer table built from viewer.fields. A 'Source file format' section is generated from source_files.formats and placed after 'A virtual store', or at {{source_formats}}; a hand-written '## Source file format' section replaces it. Recommended headings: A virtual store; What the store adds over the files; The viewer; Where the metadata came from; The time axis; Opening the store: notes; Performance: why reads cost what they do; How the store was built and validated; Updates. 'A virtual store' is required."}
+    "# Documentation":       {required: true,  description: "Free sections in order, rendered to docs/documentation.md. The placeholder {{viewer_fields_table}} is replaced by the per-variable viewer table built from viewer.fields. A 'Source file format' section is generated from source_files.formats and placed after 'A virtual store', or at {{source_formats}}; a hand-written '## Source file format' section replaces it. Recommended headings: A virtual store; What the store adds over the files; The viewer; Where the metadata came from; The time axis; Opening the store: notes; Performance: why reads cost what they do; How the store was built and validated; Updates. 'A virtual store' is required for a virtual store (not enforced by the script); a materialized store (no virtual chunk containers, e.g. fish-pace/gobai-o2) says what it is instead."}
   auto:
     variables:        {from: "store: every data variable per group, with dims, units, standard_name and long_name; the Standard name cell shows standard_name, else variable_notes, else long_name", used_in: [README]}
     coordinates:      {from: "store: name, size, first to last value with units", used_in: [README]}
     groups:           {from: "store: group tree; one-group stores show no group line", used_in: [README]}
     snapshot:         {from: "store: the snapshot main points at, and its time", used_in: [README, metadata]}
     last_update:      {from: "store: time of that snapshot; shown under the store URL and in Provenance", used_in: [README, collection]}
-    store_attributes: {from: "store: root group attributes", used_in: [metadata]}
+    store_attributes: {from: "store: root group attributes; may be empty when every group has its own", used_in: [metadata]}
+    group_attributes: {from: "store: attributes of each non-root group that has any", used_in: [metadata]}
+    virtual_chunk_containers: {from: "store: container URL prefixes; s3:// ones change the loader's credentials, none (materialized) drops them", used_in: [README]}
     source_files:     {from: "anonymous listing of netcdf_url: format, path, files, size; formats (each format found, with files checked and first and last file) and formats_sampled (which files were checked)", used_in: [collection, documentation]}
     netcdf_attributes: {from: "latest NetCDF copy, when metadata.netcdf_attributes is true: {file, url, selected_by, attributes}", used_in: [metadata]}

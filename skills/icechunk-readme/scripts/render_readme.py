@@ -257,12 +257,15 @@ def render_collection(source, auto_dir, products_dir, out):
         if sf:
             fmt = sf.get("format", "files")
             data.append(f"**{FORMATS.get(fmt, fmt)}:** `{sf['path']}`, {sf['files']:,} files, {sf['size']}")
-            files_link = f"[{fmt}]({web}/{sf['path'].rstrip('/')})"  # Source Coop redirects a trailing slash
+            if "://" in sf["path"]:  # files outside the collection, e.g. AWS (s3:// or https://)
+                files_link = f"[{fmt}]({sf.get('url') or sf['path']})"
+            else:
+                files_link = f"[{fmt}]({web}/{sf['path'].rstrip('/')})"  # Source Coop redirects a trailing slash
         data.append(f"**Icechunk:** `{p['store_url']}`" + (f", {r['store_note']}" if r.get("store_note") else ""))
         if auto.get("last_update"):
             data.append(f"Updated {auto['last_update']}")
         rows.append([f"**{r['name']}** (`{pid}`), {r['detail']}", f"[README]({readme_url})",
-                     time_coverage(auto), "<br>".join(data)])
+                     r.get("time_coverage") or time_coverage(auto), "<br>".join(data)])
         code = ", ".join(f"[{LANGUAGES.get(lang, lang)}]({readme_url}#user-content-{lang})" for lang in p["code"])
         cells = [r["short_name"], f"[icechunk]({browse_url(p['store_url'])})", files_link]
         if viewer:
@@ -300,7 +303,27 @@ def render_collection(source, auto_dir, products_dir, out):
 
 # ---------------------------------------------------------------- product
 
-def python_section(p, examples):
+def auth_lines(containers):
+    """Loader lines that authorize the store's virtual chunk containers.
+
+    Store values without the list (older JSON) get the HTTPS form; a materialized store (no
+    containers) needs none; an s3:// container needs anonymous S3 credentials, which
+    authorize_virtual_chunk_access accepts only through containers_credentials.
+    """
+    if containers is None:
+        return ["    auth = {p: icechunk.credentials.HttpAccess for p in repo.config.virtual_chunk_containers or []}",
+                "    repo = repo.reopen(authorize_virtual_chunk_access=auth)"]
+    if not containers:
+        return []
+    if not any(c.startswith("s3://") for c in containers):
+        return auth_lines(None)
+    return ["    auth = icechunk.containers_credentials({",
+            "        p: icechunk.s3_anonymous_credentials() if p.startswith(\"s3://\") else icechunk.credentials.HttpAccess",
+            "        for p in repo.config.virtual_chunk_containers})",
+            "    repo = repo.reopen(authorize_virtual_chunk_access=auth)"]
+
+
+def python_section(p, examples, auto):
     py = p["code"]["python"]
     store = p["store_url"]
     needs = join_and([f"**Python {py['python_version']} or newer**"] + [f"`{x}`" for x in py["packages"]])
@@ -317,15 +340,20 @@ def python_section(p, examples):
         code += ["# Zarr's default of 10 concurrent reads is too low.",
                  f'zarr.config.set({{"async.concurrency": {py["concurrency"]}}})', ""]
     fn = py["function"]
-    code += ["", f'def {fn}(ref="main", chunks=None):',
+    # A store whose arrays are in groups (noaa-ohc, noaa-oisst) opens as an empty root without one.
+    # The first group in order.groups is the default; "/" (arrays at the root too) means None.
+    groups = ordered_groups(p, auto) if len(auto.get("groups") or ["/"]) > 1 else []
+    group_arg = ("group=None, " if groups[0] == "/" else f'group="{groups[0].lstrip("/")}", ') if groups else ""
+    code += ["", f'def {fn}({group_arg}ref="main", chunks=None):',
              f'    """{py["docstring"]}"""',
              f'    url = "{store}"',
-             "    repo = icechunk.Repository.open(icechunk.http_storage(url))",
-             "    auth = {p: icechunk.credentials.HttpAccess for p in repo.config.virtual_chunk_containers or []}",
-             "    repo = repo.reopen(authorize_virtual_chunk_access=auth)",
+             "    repo = icechunk.Repository.open(icechunk.http_storage(url))"]
+    code += auth_lines(auto.get("virtual_chunk_containers"))
+    code += [
              "    tags = set(repo.list_tags())",
              "    session = repo.readonly_session(tag=ref) if ref in tags else repo.readonly_session(ref)",
-             "    return xr.open_zarr(session.store, consolidated=False, chunks=chunks)",
+             "    return xr.open_zarr(session.store, consolidated=False, chunks=chunks"
+             + (", group=group)" if groups else ")"),
              "", ""]
     code += [f"# {line}" for line in (py.get("chunks_advice") or CHUNKS_ADVICE).strip().splitlines()]
     code += [f"ds = {fn}()", "print(ds)"]
@@ -340,17 +368,24 @@ def python_section(p, examples):
         subset, "**Example analyses**", examples] if x)
 
 
-def ordered(items, names):
+def ordered(items, names, key=lambda x: x["name"]):
     """Items named in `names` first, in that order; the rest after, in the store values' order."""
     rank = {n: i for i, n in enumerate(names or [])}
-    return sorted(items, key=lambda x: rank.get(x["name"], len(rank)))
+    return sorted(items, key=lambda x: rank.get(key(x), len(rank)))
+
+
+def ordered_groups(p, auto):
+    return ordered(auto.get("groups") or ["/"], (p.get("order") or {}).get("groups"), key=lambda g: g)
 
 
 def order_errors(p, auto, where):
     """Names in the source's `order` that the store does not have (a typo would be silently ignored)."""
     errors = []
-    for kind in ("variables", "coordinates"):
-        have = {x["name"] for group in (auto.get(kind) or {}).values() for x in group}
+    for kind in ("variables", "coordinates", "groups"):
+        if kind == "groups":
+            have = set(auto.get("groups") or ["/"])
+        else:
+            have = {x["name"] for group in (auto.get(kind) or {}).values() for x in group}
         for name in ((p.get("order") or {}).get(kind) or []):
             if name not in have:
                 errors.append(f"{where}: order.{kind} names '{name}', which the store does not have")
@@ -358,7 +393,7 @@ def order_errors(p, auto, where):
 
 
 def variables_section(p, auto, readme):
-    groups = auto.get("groups") or ["/"]
+    groups = ordered_groups(p, auto)
     order = p.get("order") or {}
     notes, cnotes = p.get("variable_notes") or {}, p.get("coordinate_notes") or {}
     blocks = ["## Variables and coordinates"]
@@ -368,7 +403,7 @@ def variables_section(p, auto, readme):
         if len(groups) > 1:
             blocks.append(f"### Group `{group}`")
         blocks.append(table(["Variable", "Dimensions", "Units", "Standard name"], [
-            [f"`{v['name']}`", ", ".join(v["dims"]), v.get("units", ""),
+            [f"`{v['name']}`", ", ".join(v["dims"]) or "scalar", v.get("units", ""),
              v.get("standard_name") or notes.get(v["name"]) or v.get("long_name", "")]
             for v in ordered(auto["variables"][group], order.get("variables"))]))
         coords = []
@@ -477,9 +512,11 @@ def render_product(source, auto_dir, out):
         need(front, f"performance.{field}", where, errors)
     for field in ("built", "build_script", "build_url", "tested_with"):
         need(front, f"provenance.{field}", where, errors)
-    for field in ("snapshot", "last_update", "variables", "coordinates", "store_attributes"):
+    for field in ("snapshot", "last_update", "variables", "coordinates"):
         if auto and blank(auto.get(field)):
             errors.append(f"{where}: store values for '{front.get('id')}' lack '{field}'")
+    if auto and "store_attributes" not in auto:  # {} is real: noaa-ohc keeps its attributes per group
+        errors.append(f"{where}: store values for '{front.get('id')}' lack 'store_attributes'")
     if auto:
         errors += order_errors(front, auto, where)
     if not str(front.get("store_url", "")).startswith("https://"):
@@ -511,7 +548,7 @@ def render_product(source, auto_dir, out):
         f"Updated {auto['last_update']}.",
         readme.get("Notes", ""),
         variables_section(p, auto, readme),
-        "## Data access (code)\n\n" + python_section(p, readme["Example analyses"]),
+        "## Data access (code)\n\n" + python_section(p, readme["Example analyses"], auto),
         "## Performance\n\n" + table(["Read", "Chunks", "Data moved", "Time (measured)"], [
             [r["read"], f"{r['chunks']:,}" if isinstance(r["chunks"], int) else r["chunks"],
              r["data_moved"], r["time"]] for r in perf["rows"]])
@@ -544,6 +581,12 @@ def render_product(source, auto_dir, out):
             "## Published Icechunk dataset",
             f"Store: [{p['store_url']}]({p['store_url']}); snapshot <code>{cell(auto['snapshot'])}</code>.",
             attribute_table(auto["store_attributes"])]
+    gattrs = auto.get("group_attributes") or {}
+    if gattrs and not auto["store_attributes"]:
+        meta[-1] = "The root group has no attributes; each group has its own."
+    for group in ordered_groups(p, auto):
+        if group in gattrs:
+            meta += [f"### Group `{group}`", attribute_table(gattrs[group])]
     if nc:
         meta += ["## Latest completed NetCDF copy",
                  f"File: [{nc['file']}]({nc['url']}). Selected by {nc.get('selected_by', 'date')}. "

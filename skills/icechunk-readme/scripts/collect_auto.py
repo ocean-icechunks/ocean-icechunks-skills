@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 """Read the values a README needs from each Icechunk store and write <product id>.json files.
 
-Writes the --auto directory that render_readme.py takes. Every read is anonymous HTTPS: the
-store's main branch through Icechunk, the source-file prefix through an S3 ListObjectsV2
-listing, and, when a product asks for it, the header of its newest NetCDF file through range
-requests. Nothing is written anywhere but --out.
+Writes the --auto directory that render_readme.py takes. Every read is anonymous: the
+store's main branch through Icechunk (s3:// virtual chunk containers with anonymous S3
+credentials), the source-file prefix through an S3 ListObjectsV2 listing over HTTPS, the first
+bytes of a sample of files for their format and, when a product asks for it, the header of its
+newest NetCDF file through range requests. Nothing is written anywhere but --out.
 
     collect_auto.py collection.md --out auto/            every product the collection lists
     collect_auto.py roms_hiig.md  --out auto/            one product
 
 Needs Python 3.10+, PyYAML, icechunk, xarray and zarr; h5py too when a product sets
 metadata.netcdf_attributes and its newest file is NetCDF-4/HDF5 (NetCDF-3 headers are parsed
-here). The source-file prefix is the product's netcdf_url; without it, source_files is left out.
+here). The source-file prefix is the product's netcdf_url; without it, or when that host
+cannot be listed as S3, source_files is left out.
 
 Exit status: 0 written, 1 a product could not be read (others are still written), 2 usage error.
 """
@@ -24,6 +26,7 @@ import pathlib
 import re
 import struct
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -35,6 +38,7 @@ UNITS = {"degrees_north": "°N", "degree_north": "°N", "degrees_east": "°E", "
 # Attributes the netCDF library adds to a NetCDF-4 file; xarray hides them, and so do we.
 NC_INTERNAL = {"_NCProperties", "_nc3_strict", "_IsNetcdf4", "_SuperblockVersion"}
 TIMEOUT = 60
+MAX_SAMPLE = 40  # most file headers read to find the source formats
 
 
 class CollectError(Exception):
@@ -60,10 +64,17 @@ def open_main(store_url):
     import icechunk
     repo = icechunk.Repository.open(icechunk.http_storage(store_url))
     # Coordinates such as time may be virtual; reading them needs the containers authorized.
-    auth = {p: icechunk.credentials.HttpAccess for p in repo.config.virtual_chunk_containers or []}
+    # An s3:// container (noaa-oisst) needs S3 anonymous credentials; HttpAccess is refused.
+    containers = sorted(repo.config.virtual_chunk_containers or [])
+    for p in containers:
+        if not p.startswith(("s3://", "http://", "https://")):
+            raise CollectError(f"virtual chunk container {p}: only s3:// and http(s):// are supported")
+    auth = icechunk.containers_credentials({
+        p: icechunk.s3_anonymous_credentials() if p.startswith("s3://") else icechunk.credentials.HttpAccess
+        for p in containers})
     repo = repo.reopen(authorize_virtual_chunk_access=auth)
     snap = next(iter(repo.ancestry(branch="main")))
-    return repo.readonly_session("main"), snap
+    return repo.readonly_session("main"), snap, containers
 
 
 def array_groups(store):
@@ -175,9 +186,23 @@ def time_range(ds):
 
 # --- the source files --------------------------------------------------------------------
 
+class NotListable(CollectError):
+    pass
+
+
 def split_s3_url(url):
-    """https://data.source.coop/<bucket>/<key prefix> -> (listing endpoint, bucket, prefix)."""
+    """Listing endpoint, bucket and key prefix of an S3-style URL.
+
+    s3://<bucket>/<prefix> and https://<bucket>.s3[.<region>].amazonaws.com/<prefix> are
+    virtual-hosted; anything else (data.source.coop, OSN) is taken as path-style,
+    https://<host>/<bucket>/<prefix>.
+    """
     u = urllib.parse.urlsplit(url)
+    if u.scheme == "s3":
+        return f"https://{u.netloc}.s3.amazonaws.com", u.netloc, u.path.lstrip("/")
+    m = re.match(r"^(?P<bucket>[^.]+)\.s3[.-]([a-z0-9-]+\.)?amazonaws\.com$", u.netloc)
+    if m:
+        return f"{u.scheme}://{u.netloc}", m["bucket"], u.path.lstrip("/")
     bucket, _, prefix = u.path.lstrip("/").partition("/")
     return f"{u.scheme}://{u.netloc}/{bucket}", bucket, prefix
 
@@ -190,8 +215,14 @@ def list_prefix(url):
         q = {"list-type": "2", "prefix": prefix}
         if token:
             q["continuation-token"] = token
-        body, _ = http(f"{endpoint}?{urllib.parse.urlencode(q)}")
-        root = ET.fromstring(body)
+        try:
+            body, _ = http(f"{endpoint}?{urllib.parse.urlencode(q)}")
+            root = ET.fromstring(body)
+        except (urllib.error.HTTPError, ET.ParseError) as exc:
+            # An HTTPS server that is not S3 (CoastWatch, NCEI) answers with a web page or a 404.
+            raise NotListable(f"{url} cannot be listed as S3 ({type(exc).__name__})") from None
+        if not root.tag.endswith("ListBucketResult"):
+            raise NotListable(f"{url} cannot be listed as S3 (answer is <{root.tag}>)")
         for c in root.findall("s3:Contents", ns):
             objects.append((c.findtext("s3:Key", namespaces=ns), int(c.findtext("s3:Size", namespaces=ns)),
                             c.findtext("s3:LastModified", namespaces=ns)))
@@ -202,24 +233,29 @@ def list_prefix(url):
 
 def size_text(n):
     for unit, scale in (("TB", 1e12), ("GB", 1e9), ("MB", 1e6)):
-        if n >= scale / 100 or unit == "MB":
+        if n >= scale / 10 or unit == "MB":  # 0.46 TB as the PacIOOS README has it, but 33 GB, not 0.03 TB
             return f"{n / scale:.2f} {unit}"
 
 
+def relative(url, data_base):
+    """Path under the collection when the files are there (PacIOOS); else the full URL (AWS)."""
+    return url[len(data_base) + 1:] if url.startswith(data_base + "/") else url
+
+
 def source_files(netcdf_url, data_base):
-    if not netcdf_url.startswith(data_base + "/"):
-        raise CollectError(f"netcdf_url {netcdf_url} is not under the collection {data_base}/")
     endpoint, objects = list_prefix(netcdf_url)
     data = [o for o in objects if pathlib.PurePosixPath(o[0]).suffix.lower() in FORMATS]
     if not data:
         raise CollectError(f"no data files (.nc, .h5, ...) under {netcdf_url}")
     kinds = {FORMATS[pathlib.PurePosixPath(k).suffix.lower()] for k, _, _ in data}
     summary = {"format": kinds.pop() if len(kinds) == 1 else "files",
-               "path": netcdf_url[len(data_base) + 1:],
+               "path": relative(netcdf_url, data_base),
+               # a browser cannot open s3://; the listing endpoint's URL is the same place over HTTPS
+               "url": f"{endpoint}/{split_s3_url(netcdf_url)[2]}",
                "files": len(data),
                "size": size_text(sum(s for _, s, _ in data))}
     formats, summary["formats_sampled"] = file_formats(endpoint, data)
-    rel = lambda key: f"{endpoint}/{key}"[len(data_base) + 1:]  # noqa: E731  same base as "path"
+    rel = lambda key: relative(f"{endpoint}/{key}", data_base)  # noqa: E731  same base as "path"
     summary["formats"] = [{**f, "first": rel(f["first"]), "last": rel(f["last"])} for f in formats]
     return summary, endpoint, data
 
@@ -246,6 +282,9 @@ def file_formats(endpoint, data):
     for key, _, _ in data:
         folders.setdefault(key.rpartition("/")[0], []).append(key)
     sample = sorted({k for keys in folders.values() for k in (min(keys), max(keys))})
+    if len(sample) > MAX_SAMPLE:  # noaa-oisst has 543 monthly folders; keep the requests bounded
+        step = (len(sample) - 1) / (MAX_SAMPLE - 1)
+        sample = [sample[round(i * step)] for i in range(MAX_SAMPLE)]
     formats = {}
     for key in sample:
         head, _ = http(f"{endpoint}/{key}", {"Range": "bytes=0-7"})
@@ -253,15 +292,20 @@ def file_formats(endpoint, data):
         entry = formats.setdefault(fmt, {"format": fmt, "files": 0, "first": key, "last": key})
         entry["files"] += 1
         entry["last"] = key
-    return list(formats.values()), (f"first and last file in each of {len(folders)} folders, "
-                                    f"{len(sample)} of {len(data)} files")
+    spread = "" if len(sample) < MAX_SAMPLE else f", {MAX_SAMPLE} of them spread evenly"
+    return list(formats.values()), (f"first and last file in each of {len(folders)} folders{spread}, "
+                                    f"{len(sample)} of {len(data):,} files")
 
 
 def newest(data):
-    """The newest file: by the latest YYYYMMDD date in its name, else by LastModified."""
+    """The newest file: by the latest date in its name, else by LastModified.
+
+    A date is YYYYMMDD, optionally with HH or HHMM (HYCOM: hycom_GLBv0.08_539_2015123012_t021.nc);
+    ties go to the later name (the longer lead, t021 after t000).
+    """
     def name_date(key):
-        found = re.findall(r"(?<!\d)((?:19|20)\d{6})(?!\d)", pathlib.PurePosixPath(key).name)
-        return found[-1] if found else None
+        found = re.findall(r"(?<!\d)((?:19|20)\d{6}(?:\d{2}){0,2})(?!\d)", pathlib.PurePosixPath(key).name)
+        return found[-1].ljust(12, "0") if found else None
     dated = [(name_date(k), k) for k, _, _ in data if name_date(k)]
     if len(dated) == len(data):
         return max(dated)[1], "filename date"
@@ -367,28 +411,42 @@ def netcdf_attributes(endpoint, key):
 
 def collect(product, data_base):
     import zarr
-    session, snap = open_main(product["store_url"])
+    session, snap, containers = open_main(product["store_url"])
     last_update = snap.written_at.astimezone(dt.timezone.utc).date().isoformat()
     groups = array_groups(session.store)
     if not groups:
         raise CollectError(f"{product['store_url']}: main has no arrays")
     auto = {"_comment": f"Read from the store and its source files by collect_auto.py on "
                         f"{dt.date.today().isoformat()}; do not edit by hand."}
-    variables, coordinates, first = {}, {}, None
+    variables, coordinates, ranges, group_attributes = {}, {}, [], {}
+    root = zarr.open_group(session.store, mode="r")
     for g in groups:
         ds, variables[g], coordinates[g] = group_values(session.store, g, last_update)
-        first = first if first is not None else ds
-    auto["time_range"] = time_range(first)
+        ranges += time_range(ds)
+        if g != "/":
+            # zarr, not ds.attrs: xarray moves a global 'coordinates' attribute into encoding.
+            attrs = dict(root[g.lstrip("/")].attrs)
+            if attrs:
+                group_attributes[g] = jsonable(attrs)
+    # Over every group: noaa-ohc's groups are eras (daily 2020-2024, 14day 2025-).
+    auto["time_range"] = [min(ranges), max(ranges)] if ranges else []
     data = None
     if product.get("netcdf_url"):
-        auto["source_files"], endpoint, data = source_files(product["netcdf_url"].rstrip("/") + "/", data_base)
+        url = product["netcdf_url"]
+        url = url if url.endswith("/") else url + "/"
+        try:
+            auto["source_files"], endpoint, data = source_files(url, data_base)
+        except NotListable as exc:
+            auto["_source_files"] = f"left out: {exc}"
     auto.update(groups=groups, snapshot=snap.id, last_update=last_update,
+                virtual_chunk_containers=containers,
                 variables=variables, coordinates=coordinates,
-                # zarr, not ds.attrs: xarray moves a global 'coordinates' attribute into encoding.
-                store_attributes=jsonable(dict(zarr.open_group(session.store, mode="r").attrs)))
+                store_attributes=jsonable(dict(root.attrs)))
+    if group_attributes:
+        auto["group_attributes"] = group_attributes
     if (product.get("metadata") or {}).get("netcdf_attributes"):
         if not data:
-            raise CollectError("metadata.netcdf_attributes is set but there is no netcdf_url to read from")
+            raise CollectError("metadata.netcdf_attributes is set but no listable netcdf_url to read from")
         key, selected_by = newest(data)
         url, attrs = netcdf_attributes(endpoint, key)
         auto["netcdf_attributes"] = {"file": pathlib.PurePosixPath(key).name, "url": url,
@@ -436,7 +494,8 @@ def main(argv=None):
             status = 1
             continue
         if "source_files" not in auto:
-            print(f"collect_auto: {src}: no netcdf_url, so no source_files", file=sys.stderr)
+            why = auto.get("_source_files") or "no netcdf_url"
+            print(f"collect_auto: {src}: no source_files ({why})", file=sys.stderr)
         path = args.out / f"{product['id']}.json"
         path.write_text(json.dumps(auto, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
         print(f"wrote {path}")

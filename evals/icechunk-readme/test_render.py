@@ -129,7 +129,7 @@ class RenderPacIOOS(unittest.TestCase):
 
     def auto_copy(self, edit):
         """Copy the auto/ fixtures, apply edit(dict) to roms_hiig.json; return the directory."""
-        auto = self.tmp / "auto"
+        auto = pathlib.Path(tempfile.mkdtemp(dir=self.tmp)) / "auto"
         shutil.copytree(HERE / "auto", auto)
         path = auto / "roms_hiig.json"
         values = json.loads(path.read_text(encoding="utf-8"))
@@ -177,6 +177,54 @@ class RenderPacIOOS(unittest.TestCase):
         _, doc = self.product_files(HERE / "source/roms_hiig.md", self.auto_copy(mixed))
         self.assertIn("not all in one format", doc)
         self.assertIn("NetCDF-4 files are HDF5", doc)
+
+    def test_loader_credentials_follow_containers(self):
+        def s3(values):
+            values["virtual_chunk_containers"] = ["s3://some-bucket/"]
+        readme, _ = self.product_files(HERE / "source/roms_hiig.md", self.auto_copy(s3))
+        self.assertIn("icechunk.containers_credentials(", readme)
+        self.assertIn("icechunk.s3_anonymous_credentials()", readme)
+
+        def materialized(values):
+            values["virtual_chunk_containers"] = []
+        readme, _ = self.product_files(HERE / "source/roms_hiig.md", self.auto_copy(materialized))
+        self.assertNotIn("authorize_virtual_chunk_access", readme)
+
+    def test_groups(self):
+        """Arrays only in groups (noaa-ohc): group argument, group order, per-group attributes."""
+        def grouped(values):
+            for kind in ("variables", "coordinates"):
+                values[kind] = {"/daily": values[kind]["/"], "/14day": values[kind]["/"]}
+            values["groups"] = ["/14day", "/daily"]
+            values["group_attributes"] = {"/14day": {"title": "fourteen"}, "/daily": {"title": "one"}}
+            values["store_attributes"] = {}
+        path = self.edited("roms_hiig.md", "variable_notes:",
+                           "groups_note: Eras of the product.\nvariable_notes:")
+        text = path.read_text(encoding="utf-8").replace(
+            "  coordinates: [time,", "  groups: [/daily, /14day]\n  coordinates: [time,")
+        path.write_text(text, encoding="utf-8")
+        auto = self.auto_copy(grouped)
+        readme, _ = self.product_files(path, auto)
+        self.assertIn('def open_forecast(group="daily", ref="main", chunks=None):', readme)
+        self.assertIn("chunks=chunks, group=group)", readme)
+        self.assertLess(readme.index("### Group `/daily`"), readme.index("### Group `/14day`"))
+        meta = (self.tmp / "out/docs/metadata.md").read_text(encoding="utf-8")
+        self.assertIn("The root group has no attributes", meta)
+        self.assertLess(meta.index("### Group `/daily`"), meta.index("### Group `/14day`"))
+
+    def test_collection_row_overrides_and_external_files(self):
+        def external(values):
+            values["time_range"] = []
+            values["source_files"].update(path="s3://bucket/data/", url="https://bucket.s3.amazonaws.com/data/")
+        auto = self.auto_copy(external)
+        src = self.edited("roms_hiig.md", "  store_note: best time series\n",
+                          "  store_note: best time series\n  time_coverage: climatology\n")
+        out = self.tmp / "coll"
+        status, err = run(src.parent / "collection.md", "--auto", auto, "--out", out)
+        self.assertEqual(status, 0, err)
+        readme = (out / "README.md").read_text(encoding="utf-8")
+        self.assertIn("| climatology |", readme)
+        self.assertIn("[netcdf](https://bucket.s3.amazonaws.com/data/)", readme)
 
     def test_blank_templates_fail_cleanly(self):
         for name in ("collection-template.md", "product-template.md"):
