@@ -1,4 +1,5 @@
 ---
+# Quote any value containing ' #' or ': ' ("issue #10"); YAML reads ' #' as a comment.
 # Product README source. Fill in, then render README.md, docs/documentation.md and
 # docs/metadata.md. Field rules: assets/schema.yaml. Variables, coordinates, groups,
 # snapshot, last update and global attributes are read from the store: do not write them here.
@@ -41,12 +42,13 @@ performance:                 # measured, never estimated
   rows:                      # {read, chunks, data_moved, time}
     -
   measured:                  # when, where and with which settings
+  open_time:                 # optional, e.g. about a second
 provenance:
   built:                     # date of the first build
   build_script:              # e.g. build_store.py
   build_url:                 # link to it in the repository
   tested_with:               # versions the README code was run with
-  build_files:               # file names published in docs/
+  build_files:               # file names published in docs/; or {file, label}
     -
   how_made:                  # how_store_created.md
     file:

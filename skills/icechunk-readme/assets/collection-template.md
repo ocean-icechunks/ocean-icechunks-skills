@@ -1,4 +1,5 @@
 ---
+# Quote any value containing ' #' or ': ' ("issue #10"); YAML reads ' #' as a comment.
 # Collection README source. Fill in, then render README.md and docs/documentation.md.
 # Field rules (required, written by a person or filled from the store): assets/schema.yaml.
 level: collection
@@ -13,6 +14,7 @@ provider:                    # who owns the source data; products inherit this
   url:                       # provider home page
   data_services_url:         # provider's own data access page (header link)
   data_services_label:       # e.g. Data access (PacIOOS)
+  citation_url:              # optional: how to cite the data; defaults to data_services_url
 viewer:                      # optional: the one browser viewer for the whole collection
   name:                      # link text, e.g. Gridlook
   url:                       # .../viewer/index.html
@@ -40,7 +42,8 @@ netcdf_layout:               # optional, e.g. <dataset>/netcdf/[<version>/]<year
 
 ## Citation
 
-<!-- Required. How to cite the data. Products inherit it. -->
+<!-- Optional; delete to use the generated sentence ("The data are <provider>'s. Any use
+     ... should cite <provider>, as described at <citation_url>."). -->
 
 ## Caveats
 

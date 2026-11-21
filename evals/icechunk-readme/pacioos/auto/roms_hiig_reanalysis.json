@@ -1,0 +1,9 @@
+{
+ "_comment": "Frozen collection-table values for a product without a full source file yet. Test fixture.",
+ "dates": "2009-01-01 to 2020-12-28",
+ "netcdf": {
+  "path": "roms_hiig_reanalysis/netcdf/v2.0/",
+  "files": 4380,
+  "size": "1.17 TB"
+ }
+}

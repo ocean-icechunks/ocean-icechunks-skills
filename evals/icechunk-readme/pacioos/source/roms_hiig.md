@@ -45,6 +45,7 @@ performance:
     - {read: One surface map, chunks: 1, data_moved: 230 KB, time: 0.2 s}
     - {read: "One 3-D field, 36 levels", chunks: 36, data_moved: 8.3 MB, time: 0.8 s}
     - {read: "Point series, one depth, 5,497 steps", chunks: 5497, data_moved: 1.3 GB, time: 8.5 s}
+  open_time: about a second
   measured: '2026-11-14 from a JupyterHub, with `zarr.config.set({"async.concurrency": 128})` and `chunks=None`'
 provenance:
   built: 2026-11-14
@@ -56,14 +57,14 @@ provenance:
     - build_store.py
     - forecast_store.py
     - update_store.py
-    - forecast-smoke-test-local.ipynb
+    - {file: forecast-smoke-test-local.ipynb, label: the local smoke-test notebook}
     - erddap_metadata.json
     - how_store_created.md
   how_made:
     file: how_store_created.md
     url: https://github.com/ocean-icechunks/pacioos/blob/main/stores/roms_hiig/how_store_created.md
   plan:
-    label: issue #10
+    label: "issue #10"
     url: https://github.com/ocean-icechunks/pacioos/issues/10
 citation_extra: The model runs are produced by Brian Powell (University of Hawaiʻi at Mānoa).
 metadata:

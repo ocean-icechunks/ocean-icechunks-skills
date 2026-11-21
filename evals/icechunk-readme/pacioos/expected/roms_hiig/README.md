@@ -115,7 +115,7 @@ Measured 2026-11-14 from a JupyterHub, with `zarr.config.set({"async.concurrency
   it. 657 runs, 2025-01-01 to 2026-11-17 (2026-11-18); 29 days have no run, at most 3 in a row.
 - **Built** 2026-11-14 by `build_store.py` in
   [ocean-icechunks/pacioos](https://github.com/ocean-icechunks/pacioos/tree/main/stores/roms_hiig).
-  Last update 2026-11-18, snapshot `XA93E152DH2YJ3KEZ3E0`.
+  Last update 2026-11-19, snapshot `XDCVTP2XZ131GBWFFVD0`.
 - **Tested with** icechunk 2.3.1, virtualizarr 2.8.0, xarray 2026.9.0, zarr 3.4.2, Python 3.12.
 - **Build files** (in [`docs/`](https://data.source.coop/ocean-icechunks/pacioos/roms_hiig/docs/)): `requirements.txt`, `build_store.py`, `forecast_store.py`, `update_store.py`,
   the local smoke-test notebook `forecast-smoke-test-local.ipynb`, `erddap_metadata.json` and
