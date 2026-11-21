@@ -1,0 +1,3 @@
+# For evals/icechunk-readme/test_render.py and skills/icechunk-readme/scripts/render_readme.py.
+# PyYAML parses the YAML front matter of the source files (https://pypi.org/project/PyYAML/).
+PyYAML>=6.0

@@ -13,6 +13,8 @@ WRF model.
 https://data.source.coop/ocean-icechunks/pacioos/roms_hiig/icechunk
 ```
 
+Updated 2026-11-19.
+
 **It is the "best" time series, as PacIOOS's THREDDS and ERDDAP serve it.** The daily runs
 overlap: each covers 7 days. The store has one time axis, and at each time it takes the newest
 run that has it. So the past is a chain of each run's first day, and the last 7 days are the
@@ -32,7 +34,7 @@ newest run's forecast. Two coordinates on `time` say where each value came from:
 
 | Coordinate | Size | Values |
 |---|---|---|
-| `time` | 5,537 (2026-11-18) | 2025-01-01T00Z to 7 days after the newest run, every 3 hours |
+| `time` | 5,545 (2026-11-19) | 2025-01-01T00Z to 7 days after the newest run, every 3 hours |
 | `forecast_reference_time` | on `time` | the run each step comes from (NaT if no run covers it) |
 | `forecast_period` | on `time` | hours since that run's start, 0 to 168 |
 | `depth` | 36 | 0.25 to 5,500 m, positive down |
@@ -75,13 +77,16 @@ def open_forecast(ref="main", chunks=None):
     return xr.open_zarr(session.store, consolidated=False, chunks=chunks)
 
 
-# For time series keep chunks=None (the default) or large dask chunks;
-# chunks={} is many times slower (one dask task per 230 KB chunk).
+# Large Icechunk stores hold many chunk references. Open with chunks=None (the default),
+# subset, then call .chunk() on the subset if the work uses dask.
 ds = open_forecast()
 print(ds)
 ```
 
-Opening takes about a second and reads only metadata.
+**Subset, then chunk.** A large store holds many chunk references, and `chunks={}` makes one
+dask task for each, which is slow. Open with `chunks=None`, select what you need, then call
+`.chunk()` on the selection if the work uses dask. The last example below does this; it needs
+`dask` (`pip install dask`).
 
 **Example analyses**
 
@@ -95,6 +100,11 @@ series = ds.temp.sel(depth=0.25).sel(lat=21.2, lon=-157.9, method="nearest").sel
     time=slice("2025-01-01", "2025-12-31")).load()
 print(float(sst.mean()), float(series.mean()))
 print(series.forecast_reference_time.values[:10])
+
+# A July 2025 mean surface temperature map, with dask: subset first, then chunk the subset
+# (248 time steps in 31 tasks of 8)
+july = ds.temp.sel(depth=0.25, time=slice("2025-07-01", "2025-07-31")).chunk(time=8)
+mean_sst = july.mean("time").compute()
 ```
 
 ## Performance
@@ -115,7 +125,7 @@ Measured 2026-11-14 from a JupyterHub, with `zarr.config.set({"async.concurrency
   it. 657 runs, 2025-01-01 to 2026-11-17 (2026-11-18); 29 days have no run, at most 3 in a row.
 - **Built** 2026-11-14 by `build_store.py` in
   [ocean-icechunks/pacioos](https://github.com/ocean-icechunks/pacioos/tree/main/stores/roms_hiig).
-  Last update 2026-11-18, snapshot `XA93E152DH2YJ3KEZ3E0`.
+  Last update 2026-11-19, snapshot `XDCVTP2XZ131GBWFFVD0`.
 - **Tested with** icechunk 2.3.1, virtualizarr 2.8.0, xarray 2026.9.0, zarr 3.4.2, Python 3.12.
 - **Build files** (in [`docs/`](https://data.source.coop/ocean-icechunks/pacioos/roms_hiig/docs/)): `requirements.txt`, `build_store.py`, `forecast_store.py`, `update_store.py`,
   the local smoke-test notebook `forecast-smoke-test-local.ipynb`, `erddap_metadata.json` and

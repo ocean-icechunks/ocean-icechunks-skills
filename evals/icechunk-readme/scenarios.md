@@ -1,7 +1,7 @@
 # Scenarios: icechunk-readme
 
-Status: draft for slice 1 (schema and source files). The render scenarios are
-added with the render script.
+Status: draft. The render script's own tests are in `test_render.py`
+(`python3 -I evals/icechunk-readme/test_render.py`; needs `requirements.txt`).
 
 ## 1. Fill in a product source file from an existing README
 

@@ -34,6 +34,11 @@ credits:
     text: >-
       built with [Icechunk](https://icechunk.io), [VirtualiZarr](https://virtualizarr.readthedocs.io)
       and [Xarray](https://xarray.dev), hosted on [Source Cooperative](https://source.coop/ocean-icechunks/pacioos).
+  - label: Tooling
+    text: >-
+      [ocean-icechunks-skills](https://github.com/ocean-icechunks/ocean-icechunks-skills), agent skills
+      for building and documenting Icechunk stores, by Eli Holmes, Rich Signell and
+      [other contributors](https://github.com/ocean-icechunks/ocean-icechunks-skills/graphs/contributors).
   - label: Viewer
     text: >-
       [gridlook](https://github.com/d70-t/gridlook), developed by Andrej Fast, Tobi Kölling, Fabian
@@ -48,11 +53,6 @@ netcdf_layout: <dataset>/netcdf/[<version>/]<year>/<file>.nc
 
 Model output from the [Pacific Islands Ocean Observing System (PacIOOS)](https://www.pacioos.hawaii.edu)
 for the main Hawaiian Islands.
-
-## Citation
-
-**The data are PacIOOS's.** Any use of the NetCDF copies or the Icechunk stores should cite
-PacIOOS, as described at <https://www.pacioos.hawaii.edu/data-services/>.
 
 # Documentation
 

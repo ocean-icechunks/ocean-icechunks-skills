@@ -30,7 +30,8 @@ collection:
                        description: "Who owns the source data.",
                        fields: {name: "short name, e.g. PacIOOS", long_name: "full name", url: "home page",
                                 data_services_url: "provider's own data access page (header link)",
-                                data_services_label: "header link text, e.g. 'Data access (PacIOOS)'"}}
+                                data_services_label: "header link text, e.g. 'Data access (PacIOOS)'",
+                                citation_url: "optional: page saying how to cite the data; defaults to data_services_url"}}
     viewer:           {required: false, source: person, used_in: [README, documentation],
                        description: "The one browser viewer for the collection.",
                        fields: {name: "link text, e.g. Gridlook", url: "viewer index.html",
@@ -40,18 +41,19 @@ collection:
     code_license:     {required: true,  source: person, used_in: [README],
                        fields: {spdx: "e.g. Apache-2.0", author: "e.g. E. E. Holmes", attribution_required: "true | false"}}
     credits:          {required: true,  source: person, used_in: [README],
-                       description: "List of {label, text} pairs, e.g. Data, Icechunk packaging, Viewer. Markdown allowed in text."}
+                       description: "List of {label, text} pairs, e.g. Data, Icechunk packaging, Tooling, Viewer. Markdown allowed in text. Tooling credits ocean-icechunks-skills: Eli Holmes, then Rich Signell, then other contributors."}
     netcdf_layout:    {required: false, source: person, used_in: [documentation],
                        description: "URL pattern of the NetCDF copies, e.g. <dataset>/netcdf/[<version>/]<year>/<file>.nc"}
   body:
     "# README":
       "## Summary":        {required: true,  description: "One or two sentences: what the data are and who makes them. The README shows only this."}
-      "## Citation":       {required: true,  description: "How to cite the data. Products inherit it."}
+      "## Citation":       {required: false, description: "Replaces the generated data citation ('The data are <provider>'s. Any use ... should cite <provider>, as described at <citation_url>.'). Products always use the generated sentence plus citation_extra."}
       "## Caveats":        {required: false, description: "Known gaps a reader must see before using the data."}
     "# Documentation":     {required: true,  description: "Free sections in order, rendered to docs/documentation.md. Recommended headings: About the data; The Icechunk stores; The viewer; NetCDF copies; Known problems in the files; How this was built."}
   auto:
-    product_dates:    {from: "each store's time coordinate, first and last value", used_in: [README]}
-    product_netcdf:   {from: "anonymous listing of each product's netcdf/ prefix: file count and total size", used_in: [README]}
+    product_time_range: {from: "each store's time coordinate, first and last value (dates); the Time coverage column", used_in: [README]}
+    product_last_update: {from: "time of the snapshot each store's main branch points at; 'Updated' under Icechunk in the Data cell", used_in: [README]}
+    product_source_files: {from: "anonymous listing of each product's source-file prefix: format (from the extension, e.g. netcdf), path, file count and total size; also the Data files link in Data access", used_in: [README]}
     as_of:            {from: "render date and each store's last snapshot time", used_in: [documentation]}
 
 product:
@@ -85,7 +87,8 @@ product:
                                          function: "loader name, e.g. open_forecast",
                                          docstring: "one line",
                                          concurrency: "zarr async.concurrency, e.g. 128",
-                                         chunks_advice: "comment placed above the first call; optional"}}}
+                                         chunks_advice: "optional: replaces the standard comment above the first call (open with chunks=None, subset, then chunk)",
+                                         dask_example: "sentence pointing to the example that subsets and then calls .chunk(), e.g. 'The last example below does this.'"}}}
     access:           {required: false, source: person, used_in: [README],
                        description: "Only when reads are not anonymous public HTTPS: credentials needed, and any region or network limit.",
                        fields: {auth: "", region: ""}}
@@ -95,7 +98,7 @@ product:
     provenance:       {required: true,  source: person, used_in: [README],
                        fields: {built: "date of the first build", build_script: "e.g. build_store.py", build_url: "link to it in the repository",
                                 tested_with: "package versions the README code was run with, e.g. icechunk 2.3.1, xarray 2026.9.0, Python 3.12",
-                                build_files: "list of file names in docs/",
+                                build_files: "list of file names in docs/; an entry may be {file, label} to say what it is",
                                 how_made: "{file, url} of how_store_created.md", plan: "{label, url} of the planning issue"}}
     citation_extra:   {required: false, source: person, used_in: [README], description: "Added after the inherited citation, e.g. who runs the model."}
     metadata:         {required: false, source: person, used_in: [metadata],
@@ -112,7 +115,7 @@ product:
       "## Summary":          {required: true,  description: "What the store is: model, region, resolution, cadence. The store URL is placed after it automatically."}
       "## Notes":            {required: false, description: "Short paragraphs a reader needs before the tables, e.g. what 'best time series' means."}
       "## Variable notes":   {required: false, description: "Short lines after the tables, e.g. 'Land reads as NaN.'"}
-      "## Example analyses": {required: true,  description: "One code block per language, run against the store, each step with a comment."}
+      "## Example analyses": {required: true,  description: "One code block per language, run against the store, each step with a comment. One example subsets and then calls .chunk(); code.python.dask_example points to it."}
       "## Source files":     {required: true,  description: "One paragraph: what the files are, how they were copied, coverage and gaps."}
       "## Caveats":          {required: false, description: "Known gaps or anything unverified a reader must see in the README."}
     "# Documentation":       {required: true,  description: "Free sections in order, rendered to docs/documentation.md. The placeholder {{viewer_fields_table}} is replaced by the per-variable viewer table built from viewer.fields. Recommended headings: A virtual store; What the store adds over the files; The viewer; Where the metadata came from; The time axis; Opening the store: notes; Performance: why reads cost what they do; How the store was built and validated; Updates. 'A virtual store' is required."}
@@ -121,6 +124,6 @@ product:
     coordinates:      {from: "store: name, size, first to last value with units", used_in: [README]}
     groups:           {from: "store: group tree; one-group stores show no group line", used_in: [README]}
     snapshot:         {from: "store: the snapshot main points at, and its time", used_in: [README, metadata]}
-    last_update:      {from: "store: time of that snapshot", used_in: [README]}
+    last_update:      {from: "store: time of that snapshot; shown under the store URL and in Provenance", used_in: [README, collection]}
     store_attributes: {from: "store: root group attributes", used_in: [metadata]}
-    netcdf_attributes: {from: "latest NetCDF copy by filename date, when metadata.netcdf_attributes is true", used_in: [metadata]}
+    netcdf_attributes: {from: "latest NetCDF copy, when metadata.netcdf_attributes is true: {file, url, selected_by, attributes}", used_in: [metadata]}

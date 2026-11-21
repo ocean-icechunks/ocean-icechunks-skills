@@ -37,9 +37,7 @@ code:
     function: open_forecast
     docstring: Open the PacIOOS ROMS Hawaii forecast, best time series. `ref` is a branch or tag.
     concurrency: 128
-    chunks_advice: |-
-      For time series keep chunks=None (the default) or large dask chunks;
-      chunks={} is many times slower (one dask task per 230 KB chunk).
+    dask_example: The last example below does this; it needs `dask` (`pip install dask`).
 performance:
   rows:
     - {read: One surface map, chunks: 1, data_moved: 230 KB, time: 0.2 s}
@@ -56,14 +54,14 @@ provenance:
     - build_store.py
     - forecast_store.py
     - update_store.py
-    - forecast-smoke-test-local.ipynb
+    - {file: forecast-smoke-test-local.ipynb, label: the local smoke-test notebook}
     - erddap_metadata.json
     - how_store_created.md
   how_made:
     file: how_store_created.md
     url: https://github.com/ocean-icechunks/pacioos/blob/main/stores/roms_hiig/how_store_created.md
   plan:
-    label: issue #10
+    label: "issue #10"
     url: https://github.com/ocean-icechunks/pacioos/issues/10
 citation_extra: The model runs are produced by Brian Powell (University of Hawaiʻi at Mānoa).
 metadata:
@@ -105,6 +103,11 @@ series = ds.temp.sel(depth=0.25).sel(lat=21.2, lon=-157.9, method="nearest").sel
     time=slice("2025-01-01", "2025-12-31")).load()
 print(float(sst.mean()), float(series.mean()))
 print(series.forecast_reference_time.values[:10])
+
+# A July 2025 mean surface temperature map, with dask: subset first, then chunk the subset
+# (248 time steps in 31 tasks of 8)
+july = ds.temp.sel(depth=0.25, time=slice("2025-07-01", "2025-07-31")).chunk(time=8)
+mean_sst = july.mean("time").compute()
 ```
 
 ## Source files

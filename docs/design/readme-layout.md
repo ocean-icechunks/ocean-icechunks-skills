@@ -1,6 +1,6 @@
 # README layout for collections and products (#21)
 
-Status: **design settled by hand, 2026-11-21; schema and source templates in `skills/icechunk-readme/` (slice 1); render script not yet built.** Part of #21.
+Status: **design settled by hand, 2026-11-21; schema and templates (slice 1) and an offline render script (slice 2) in `skills/icechunk-readme/`; reading values from the store (slice 3) not built.** Part of #21.
 
 Issue #21 planned templates first (phase 1) and designs after (phase 2). Eli reversed that: she
 printed two live PacIOOS READMEs, marked them up by hand, and the agent redrafted from the
@@ -41,9 +41,11 @@ Eli's terms, used here (#21 says product/store, and Source Coop calls a whole co
 
 Title; a link row (View data in browser · Data access (code) · Data access (PacIOOS) ·
 Documentation); the first sentence of the intro only; a dataset table (Dataset · About → the
-product README · Dates · Data, with labelled `NetCDF:` and `Icechunk:` lines in one cell); a
-**Data access** table (Dataset · Viewer → "Gridlook" · Code → "Python", linking to each product
-README's Python section); Citation and reuse; Credits.
+product README · Time coverage · Data, with labelled `NetCDF:` and `Icechunk:` lines and an
+"Updated <date>" line in one cell); a **Data access** table (Dataset · Store → "icechunk" · Data
+files → "netcdf" · Viewer → "Gridlook" · Code → "Python", linking to each product README's Python
+section); Citation and reuse; Credits, including a Tooling line for ocean-icechunks-skills (Eli
+Holmes, then Rich Signell, then other contributors).
 
 Moved to `docs/documentation.md`: the rest of the intro, the PacIOOS metadata-page links, the
 "virtual stores" paragraph with coverage dates, the viewer note, NetCDF access and write-once
@@ -55,8 +57,8 @@ Title; link row (View data in browser → Gridlook for this product · Data acce
 provider's dataset page · How to cite · Documentation · Metadata); a short description and the
 store URL; the "best time series" explanation; **Variables and coordinates** (the group line is
 dropped when there are no groups; with groups, a table per group); **Data access (code) →
-Python**: requirements, `pip install`, "Open the dataset in xarray", "Opening takes about a
-second", then "Example analyses"; **Performance**: the timing table and how it was measured;
+Python**: requirements, `pip install`, "Open the dataset in xarray", a "Subset, then chunk"
+paragraph pointing to the example that does so, then "Example analyses"; **Performance**: the timing table and how it was measured;
 **Provenance**: source files, one line for built / last update / snapshot, tested versions,
 build-file list, how it was made; Citation and reuse.
 
@@ -127,9 +129,48 @@ the second table); **Latest completed NetCDF copy** → same; the **per-variable
 "Where the metadata came from" and "Steps to treat with care" are not yet mapped (product not
 marked up); the first fits a documentation section, the second probably `## Caveats`.
 
+## Slice 2: what the render script changed (2026-11-21)
+
+The script reproduces the hand-made files in `evals/icechunk-readme/pacioos/expected/` except for
+line wrapping (the test joins wrapped lines; the rendered page is the same). Making the two levels
+consistent changed three things in the expected files:
+
+- The collection's code-license paragraph now names the repository, as the product's does.
+- The collection `documentation.md` opens with the same sentence shape as the product's
+  ("Technical detail for the `pacioos` collection. The README has what most readers need; this
+  page has the rest."). The old sentence also said "PacIOOS product", from before the terms changed.
+- The product README's last update and snapshot now come from the same store values as
+  `metadata.md` (2026-11-19, `XDCV…`). The hand-made README had `XA93…`, a day stale: the bug
+  rule 2 exists for.
+
+Schema additions: `provenance.build_files` entries may be `{file, label}`, `provider.citation_url`; the collection's
+`## Citation` is now optional, defaulting to a generated sentence. The test also caught that YAML
+reads ` #` as a comment (`label: issue #10` became `issue`); the templates now warn about it.
+
+Three partial product source files (`roms_hiig_reanalysis`, `wrf_hi`, `ww3_hawaii`) hold only what
+the collection tables need.
+
+### Review changes (Eli, 2026-11-21)
+
+- **Time coverage** (was "Dates") is the first and last value of each store's time axis. The
+  hand-made README mixed two meanings (ROMS gave the last NetCDF run, WRF the forecast end). The
+  `auto/` fixtures' `time_range` and `last_update` were read from the four public stores on
+  2026-11-21.
+- **Last commit** is shown as "Updated <date>" under the Icechunk line in the collection table, so
+  no column is added, and under the store URL in the product README. Eli will say if the
+  collection table gets too cluttered.
+- **Data access** gains Store ("icechunk") and Data files ("netcdf", or the format of the source
+  files) columns. They link to the Source Coop browse pages (`source.coop/...`): a browser gets 404
+  from the `data.source.coop` store URL, and the browse page drops a trailing slash by redirect.
+- **Chunking advice** is general, not product-specific: large stores hold many references, so open
+  with `chunks=None`, subset, then `.chunk()` for dask work. One example must show it
+  (`code.python.dask_example` points to it). The roms_hiig July-mean example was run against the
+  public store on 2026-11-21: 248 steps in 31 dask tasks, 4.3 s. "Opening takes about a second"
+  (`performance.open_time`) was dropped.
+
 ## Open
 
-- Render script (slice 2): reproduce `expected/` from `source/`. It needs source files for the other three PacIOOS products, at least their `row`, `store_url` and `viewer`, to render the collection tables.
+- Slice 3: write the `auto/` JSON from the store (anonymous reads only).
 - The collection's "The Icechunk stores" section carries hand-written coverage dates; they go stale like the product snapshot did.
 - The other PacIOOS products and `noaa-ohc` have not been marked up; expect small additions
   (e.g. `ww3_hawaii`'s "Steps to treat with care").

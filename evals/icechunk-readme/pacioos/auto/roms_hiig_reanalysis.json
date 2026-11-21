@@ -1,0 +1,14 @@
+{
+ "_comment": "Frozen collection-table values for a product without a full source file yet. Test fixture. time_range and last_update read from the public store on 2026-11-21.",
+ "time_range": [
+  "2009-01-01",
+  "2020-12-28"
+ ],
+ "source_files": {
+  "format": "netcdf",
+  "path": "roms_hiig_reanalysis/netcdf/v2.0/",
+  "files": 4380,
+  "size": "1.17 TB"
+ },
+ "last_update": "2026-11-14"
+}

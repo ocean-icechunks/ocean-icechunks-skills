@@ -1,4 +1,5 @@
 ---
+# Quote any value containing ' #' or ': ' ("issue #10"); YAML reads ' #' as a comment.
 # Product README source. Fill in, then render README.md, docs/documentation.md and
 # docs/metadata.md. Field rules: assets/schema.yaml. Variables, coordinates, groups,
 # snapshot, last update and global attributes are read from the store: do not write them here.
@@ -33,7 +34,8 @@ code:
     function:                # loader name, e.g. open_forecast
     docstring:               # one line
     concurrency:             # zarr async.concurrency the timings used, e.g. 128
-    chunks_advice:           # optional comment above the first call
+    chunks_advice:           # optional: replaces the standard "open with chunks=None, subset, then chunk" comment
+    dask_example:            # sentence pointing to the example that subsets then chunks, e.g. The last example below does this.
 access:                      # only when reads are NOT anonymous public HTTPS
   auth:                      # credentials needed, and how to get them
   region:                    # compute-region or network limits
@@ -46,7 +48,7 @@ provenance:
   build_script:              # e.g. build_store.py
   build_url:                 # link to it in the repository
   tested_with:               # versions the README code was run with
-  build_files:               # file names published in docs/
+  build_files:               # file names published in docs/; or {file, label}
     -
   how_made:                  # how_store_created.md
     file:
@@ -79,7 +81,8 @@ extra_sections:              # escape hatch, only when no field fits; say why
 ## Example analyses
 
 <!-- Required. One code block per language, run against the store; a comment on each step.
-     It follows the generated loading code, so `ds` already exists. -->
+     It follows the generated loading code, so `ds` already exists. Include one example that
+     subsets and then calls .chunk(), and point to it with code.python.dask_example. -->
 
 ## Source files
 

@@ -1,0 +1,190 @@
+{
+ "_comment": "Frozen values the render script would read from the store (slice 3). Test fixture, time_range, last_update and snapshot read from the public store on 2026-11-21; the rest taken from the hand-made expected files.",
+ "time_range": [
+  "2025-01-01",
+  "2026-11-25"
+ ],
+ "source_files": {
+  "format": "netcdf",
+  "path": "roms_hiig/netcdf/",
+  "files": 657,
+  "size": "1.25 TB"
+ },
+ "groups": [
+  "/"
+ ],
+ "snapshot": "XDCVTP2XZ131GBWFFVD0",
+ "last_update": "2026-11-19",
+ "variables": {
+  "/": [
+   {
+    "name": "temp",
+    "dims": [
+     "time",
+     "depth",
+     "lat",
+     "lon"
+    ],
+    "units": "Celsius",
+    "standard_name": "sea_water_potential_temperature"
+   },
+   {
+    "name": "salt",
+    "dims": [
+     "time",
+     "depth",
+     "lat",
+     "lon"
+    ],
+    "units": "1e-3",
+    "standard_name": "sea_water_salinity"
+   },
+   {
+    "name": "u",
+    "dims": [
+     "time",
+     "depth",
+     "lat",
+     "lon"
+    ],
+    "units": "meter second-1",
+    "standard_name": "eastward_sea_water_velocity"
+   },
+   {
+    "name": "v",
+    "dims": [
+     "time",
+     "depth",
+     "lat",
+     "lon"
+    ],
+    "units": "meter second-1",
+    "standard_name": "northward_sea_water_velocity"
+   },
+   {
+    "name": "zeta",
+    "dims": [
+     "time",
+     "lat",
+     "lon"
+    ],
+    "units": "meter",
+    "standard_name": "sea_surface_height"
+   },
+   {
+    "name": "mask",
+    "dims": [
+     "lat",
+     "lon"
+    ],
+    "units": "",
+    "standard_name": ""
+   }
+  ]
+ },
+ "coordinates": {
+  "/": [
+   {
+    "name": "time",
+    "size": 5545,
+    "as_of": "2026-11-19",
+    "values": "2025-01-01T00Z to 2026-11-25T00Z"
+   },
+   {
+    "name": "forecast_reference_time",
+    "on": "time",
+    "values": ""
+   },
+   {
+    "name": "forecast_period",
+    "on": "time",
+    "values": ""
+   },
+   {
+    "name": "depth",
+    "size": 36,
+    "values": "0.25 to 5500 m"
+   },
+   {
+    "name": "lat",
+    "size": 195,
+    "values": "17.02 to 23.98 °N"
+   },
+   {
+    "name": "lon",
+    "size": 295,
+    "values": "−163.83 to −152.52 °E"
+   }
+  ]
+ },
+ "store_attributes": {
+  "Conventions": "CF-1.6, ACDD-1.3",
+  "ISO_Topic_Categories": "oceans",
+  "acknowledgement": "The Pacific Islands Ocean Observing System (PacIOOS) is funded through the National Oceanic and Atmospheric Administration (NOAA) as a Regional Association within the U.S. Integrated Ocean Observing System (IOOS). PacIOOS is coordinated by the University of Hawaii School of Ocean and Earth Science and Technology (SOEST).",
+  "comment": "Model runs produced by Brian Powell (powellb@hawaii.edu). Best time series across the daily forecast runs, as THREDDS FMRC \"best\": for each valid time, the most recent run that has it, including its first step. forecast_reference_time and forecast_period give the run and lead of each step. A time no run covers would read as missing (none so far).",
+  "coordinates": "time depth lat lon forecast_reference_time forecast_period",
+  "creator_email": "powellb@hawaii.edu",
+  "creator_institution": "University of Hawaii at Manoa",
+  "creator_name": "Brian S. Powell",
+  "creator_type": "person",
+  "creator_url": "https://www.soest.hawaii.edu/oceanography/faculty/powell.html",
+  "date_created": "2010-06-01",
+  "date_issued": "2010-06-01",
+  "date_metadata_modified": "2025-12-17",
+  "date_modified": "2015-05-28",
+  "forecast_runs": "658 daily runs, 2025-01-01 to 2026-11-18",
+  "geospatial_bounds": "POLYGON ((17.0184 -163.831, 23.9824 -163.831, 23.9824 -152.519, 17.0184 -152.519, 17.0184 -163.831))",
+  "geospatial_bounds_crs": "EPSG:4326",
+  "geospatial_lat_max": "23.98239",
+  "geospatial_lat_min": "17.01843",
+  "geospatial_lat_resolution": "0.03589670103092783",
+  "geospatial_lat_units": "degrees_north",
+  "geospatial_lon_max": "-152.5193",
+  "geospatial_lon_min": "-163.8307",
+  "geospatial_lon_resolution": "0.03847414965986402",
+  "geospatial_lon_units": "degrees_east",
+  "history": "2010-06-01T00:00:00Z New dataset.\n2015-05-28T00:00:00Z Model grid modified; aggregation now begins at 2015-04-15T00:00:00Z.\n2024-03-27T20:08:00Z Dataset now begins at 2023-01-01T00:00:00Z.\n2025-01-08T18:46:00Z Dataset now begins at 2024-01-01T00:00:00Z.\n2025-12-17T19:18:00Z Dataset now begins at 2025-01-01T00:00:00Z. ;\nFMRC Best Dataset\n2026-11-14T03:13:33Z Virtual Icechunk store (best time series) over unchanged copies of the forecast NetCDF files; metadata from PacIOOS ERDDAP, no data values changed.\n2026-11-14T04:54:02Z Added metadata_source (attributes only; no data or references changed).\n2026-11-16T16:22:32Z daily update: 24 steps appended, 41 re-pointed, from runs 2026-11-14, 2026-11-15; now 656 daily runs, 2025-01-01 to 2026-11-15\n2026-11-18T18:27:55Z daily update: 16 steps appended, 41 re-pointed, from runs 2026-11-17; now 657 daily runs, 2025-01-01 to 2026-11-17\n2026-11-19T16:05:28Z pacioos-job-0e8503995bc24b628fb97bc8019e4754: 8 appended, 49 re-pointed",
+  "id": "roms_hiig",
+  "institution": "Pacific Islands Ocean Observing System (PacIOOS)",
+  "instrument": "Not Applicable > Not Applicable",
+  "instrument_vocabulary": "GCMD Instrument Keywords",
+  "keywords": "Earth Science > Oceans > Ocean Circulation > Ocean Currents, Earth Science > Oceans > Ocean Temperature > Potential Temperature, Earth Science > Oceans > Salinity/Density > Salinity, Earth Science > Oceans > Sea Surface Topography > Sea Surface Height, Earth Science Services > Models > Ocean General Circulation Models (OGCM)/Regional Ocean Models, Earth Science Services > Models > Weather Research/Forecast Models",
+  "keywords_vocabulary": "GCMD Science Keywords",
+  "license": "The data may be used and redistributed for free but is not intended for legal use, since it may contain inaccuracies. Neither the data Contributor, University of Hawaii, PacIOOS, NOAA, State of Hawaii nor the United States Government, nor any of their employees or contractors, makes any warranty, express or implied, including warranties of merchantability and fitness for a particular purpose, or assumes any legal liability for the accuracy, completeness, or usefulness, of this information.",
+  "location": "Proto fmrc:ROMS_Hawaii_Regional_Ocean_Model",
+  "locations": "Continent > North America > United States Of America > Hawaii, Ocean > Pacific Ocean > Central Pacific Ocean > Hawaiian Islands",
+  "locations_vocabulary": "GCMD Location Keywords",
+  "metadata_link": "https://www.pacioos.hawaii.edu/metadata/roms_hiig.html",
+  "metadata_source": "Variable and global attributes from PacIOOS ERDDAP datasets roms_hiig and roms_hiig_ssh (https://pae-paha.pacioos.hawaii.edu/erddap/info/roms_hiig/index.html), saved 2026-11-14T02:40:40Z in stores/roms_hiig/erddap_metadata.json of https://github.com/ocean-icechunks/pacioos. The NetCDF files carry only author, history and title (\"Zlevel Model Data\"). _FillValue (9.99e10) and mask are the files' own. No data values were changed.",
+  "naming_authority": "org.pacioos",
+  "platform": "Models/Analyses > > Operational Models",
+  "platform_vocabulary": "GCMD Platform Keywords",
+  "program": "Pacific Islands Ocean Observing System (PacIOOS)",
+  "project": "Pacific Islands Ocean Observing System (PacIOOS)",
+  "publisher_email": "info@pacioos.org",
+  "publisher_institution": "Pacific Islands Ocean Observing System (PacIOOS)",
+  "publisher_name": "Pacific Islands Ocean Observing System (PacIOOS)",
+  "publisher_type": "institution",
+  "publisher_url": "http://www.pacioos.hawaii.edu",
+  "references": "https://www.myroms.org",
+  "source": "Regional Ocean Modeling System (ROMS), https://www.myroms.org",
+  "source_files": "https://data.source.coop/ocean-icechunks/pacioos/roms_hiig/netcdf/",
+  "standard_name_vocabulary": "CF Standard Name Table v39",
+  "summary": "Regional Ocean Modeling System (ROMS) 7-day, 3-hourly forecast for the region surrounding the main Hawaiian Islands at approximately 4-km resolution. Boundary conditions provided by the global, 1/12-degree (~9-km) HYbrid Coordinate Ocean Model (HYCOM). Atmospheric forcing generated by the Weather Research and Forecasting (WRF) model for the region surrounding the main Hawaiian Islands (wrf_hi) at approximately 6-km resolution. Tide forcing uses the Oregon State University (OSU) Tidal Prediction Software (OTPS) TOPEX/Poseidon global inverse solution (TPXO) to derive barotropic tidal elevation and velocity. Data are assimilated over the previous 3 days using all available observations to improve the model estimate of current ocean state (its nowcast) before forecasts are run. Assimilated observations may include satellite-based sea surface temperatures from MODIS, AVHRR, or OSTIA; satellite-based sea surface height from AVISO; surface currents from PacIOOS high-frequency radios (HFR); and in-situ water temperature and salinity profiles from ARGO floats and ocean glider autonomous underwater vehicles (AUV). While considerable effort has been made to implement all model components in a thorough, correct, and accurate manner, numerous sources of error are possible. As such, please use these data with the caution appropriate for any ocean related activity.",
+  "testOutOfDate": "now+5days",
+  "time_coverage_end": "2026-11-25T00:00:00Z",
+  "time_coverage_resolution": "PT3H",
+  "time_coverage_start": "2025-01-01T00:00:00Z",
+  "title": "Regional Ocean Modeling System (ROMS): Main Hawaiian Islands: Forecast"
+ },
+ "netcdf_attributes": {
+  "file": "hiig_forec_20261118.nc",
+  "url": "https://data.source.coop/ocean-icechunks/pacioos/roms_hiig/netcdf/2026/hiig_forec_20261118.nc",
+  "attributes": {
+   "author": "ocean",
+   "history": "Created on Wed, November 18, 2026 at 09:43",
+   "title": "Zlevel Model Data"
+  },
+  "selected_by": "filename date"
+ }
+}

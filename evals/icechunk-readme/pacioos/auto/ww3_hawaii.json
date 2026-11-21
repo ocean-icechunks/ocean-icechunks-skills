@@ -1,0 +1,14 @@
+{
+ "_comment": "Frozen collection-table values for a product without a full source file yet. Test fixture. time_range and last_update read from the public store on 2026-11-21.",
+ "time_range": [
+  "2011-06-21",
+  "2026-11-25"
+ ],
+ "source_files": {
+  "format": "netcdf",
+  "path": "ww3_hawaii/netcdf/",
+  "files": 5237,
+  "size": "0.49 TB"
+ },
+ "last_update": "2026-11-19"
+}
