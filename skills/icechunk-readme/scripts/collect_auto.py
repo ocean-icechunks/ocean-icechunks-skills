@@ -3,17 +3,19 @@
 
 Writes the --auto directory that render_readme.py takes. Every read is anonymous: the
 store's main branch through Icechunk (s3:// virtual chunk containers with anonymous S3
-credentials), the source-file prefix through an S3 ListObjectsV2 listing over HTTPS, the first
-bytes of a sample of files for their format and, when a product asks for it, the header of its
-newest NetCDF file through range requests. Nothing is written anywhere but --out.
+credentials), the files the store references, the source-file prefix through an S3
+ListObjectsV2 listing over HTTPS, the first bytes of a sample of files for their format and,
+when a product asks for it, the header of its newest source file through range requests.
+Nothing is written anywhere but --out.
 
     collect_auto.py collection.md --out auto/            every product the collection lists
     collect_auto.py roms_hiig.md  --out auto/            one product
+    collect_auto.py noaa-ohc.md   --out auto/            a standalone product: one file per store
 
 Needs Python 3.10+, PyYAML, icechunk, xarray and zarr; h5py too when a product sets
-metadata.netcdf_attributes and its newest file is NetCDF-4/HDF5 (NetCDF-3 headers are parsed
-here). The source-file prefix is the product's netcdf_url; without it, or when that host
-cannot be listed as S3, source_files is left out.
+metadata.source_attributes and its newest file is NetCDF-4/HDF5 (NetCDF-3 headers are parsed
+here). Source files are counted from the store's references (up to --max-refs chunks) and, when
+the product's source_url answers an S3 listing, from that listing, which adds sizes.
 
 Exit status: 0 written, 1 a product could not be read (others are still written), 2 usage error.
 """
@@ -163,6 +165,12 @@ def values_text(var):
                 lo, hi = (vals.min() // np.timedelta64(1, unit)), (vals.max() // np.timedelta64(1, unit))
                 return f"{lo} {name}" if lo == hi else f"{lo} to {hi} {name}"
         return f"{vals.min()} to {vals.max()}"
+    if var.dtype == bool:  # noaa-oisst `preliminary`: NOAA replaces the newest days within weeks
+        vals = var.values.ravel()
+        n = int(vals.sum())
+        if var.ndim == 1 and 0 < n < vals.size and vals[-n:].all():
+            return f"true for the last {n:,}, false before"
+        return f"true for {n:,} of {vals.size:,}"
     if not np.issubdtype(var.dtype, np.number):
         return ""
     vals = var.values
@@ -217,6 +225,27 @@ def group_values(store, group, last_update):
         if not ds[n].dims:
             coords.append({"name": n, "size": 1, "values": values_text(ds[n])})
     return ds, variables, coords
+
+
+def time_steps(ds):
+    """Steps along the group's time dimension, or None when they say little about files.
+
+    Estimates the file count of a store too large to list its references, on the assumption of
+    one file per step. Checked against exact counts (2026-11-23): gomofs, PACE CHL, OHC and
+    ECCOFS best within 0.2%, HYCOM 1.5% high, PACE KD 2x high (two groups read each file).
+    None for an FMRC (time x step: ECCOFS writes a file per step, casco one per run, 576 steps
+    in 3 files) and for a best time series of forecast runs, marked by a run time or lead along
+    time (roms_hiig 8 steps a file, txla 32).
+    """
+    import numpy as np
+    timelike = lambda v: np.issubdtype(v.dtype, np.datetime64) or np.issubdtype(v.dtype, np.timedelta64)  # noqa: E731
+    dims = [d for d in ds.dims if d in ds.coords and timelike(ds[d])]
+    if len(dims) != 1:
+        return None
+    for n in ds.coords:
+        if n not in ds.dims and timelike(ds[n]) and dims[0] in ds[n].dims:
+            return None
+    return int(ds.sizes[dims[0]])
 
 
 def jsonable(value):
@@ -303,16 +332,16 @@ def relative(url, data_base):
     return url[len(data_base) + 1:] if url.startswith(data_base + "/") else url
 
 
-def source_files(netcdf_url, data_base):
-    endpoint, objects = list_prefix(netcdf_url)
+def source_files(source_url, data_base):
+    endpoint, objects = list_prefix(source_url)
     data = [o for o in objects if pathlib.PurePosixPath(o[0]).suffix.lower() in FORMATS]
     if not data:
-        raise CollectError(f"no data files (.nc, .h5, ...) under {netcdf_url}")
+        raise CollectError(f"no data files (.nc, .h5, ...) under {source_url}")
     kinds = {FORMATS[pathlib.PurePosixPath(k).suffix.lower()] for k, _, _ in data}
     summary = {"format": kinds.pop() if len(kinds) == 1 else "files",
-               "path": relative(netcdf_url, data_base),
+               "path": relative(source_url, data_base),
                # a browser cannot open s3://; the listing endpoint's URL is the same place over HTTPS
-               "url": f"{endpoint}/{split_s3_url(netcdf_url)[2]}",
+               "url": f"{endpoint}/{split_s3_url(source_url)[2]}",
                "files": len(data),
                "size": size_text(sum(s for _, s, _ in data))}
     urls = [(f"{endpoint}/{k}", s, m) for k, s, m in data]
@@ -480,7 +509,7 @@ def nc3_attributes(f):
     return attrs
 
 
-def netcdf_attributes(url):
+def source_attributes(url):
     f = io.BufferedReader(RangeReader(url), buffer_size=1 << 20)
     magic = f.peek(8)[:8]
     if magic[:3] == b"CDF":
@@ -508,11 +537,12 @@ def collect(product, data_base, max_refs=MAX_REFS):
         raise CollectError(f"{product['store_url']}: main has no arrays")
     auto = {"_comment": f"Read from the store and its source files by collect_auto.py on "
                         f"{dt.date.today().isoformat()}; do not edit by hand."}
-    variables, coordinates, ranges, group_attributes = {}, {}, [], {}
+    variables, coordinates, ranges, group_attributes, steps = {}, {}, [], {}, []
     root = zarr.open_group(session.store, mode="r")
     for g in groups:
         ds, variables[g], coordinates[g] = group_values(session.store, g, last_update)
         ranges += time_range(ds)
+        steps.append(time_steps(ds))
         if g != "/":
             # zarr, not ds.attrs: xarray moves a global 'coordinates' attribute into encoding.
             attrs = dict(root[g.lstrip("/")].attrs)
@@ -530,8 +560,8 @@ def collect(product, data_base, max_refs=MAX_REFS):
         else:
             notes.append(f"references not counted: about {n:,} chunks, over --max-refs {max_refs:,}")
     data = None
-    if product.get("netcdf_url"):
-        url = product["netcdf_url"]
+    if product.get("source_url"):
+        url = product["source_url"]
         url = url if url.endswith("/") else url + "/"
         try:
             auto["source_files"], data = source_files(url, data_base)
@@ -544,6 +574,13 @@ def collect(product, data_base, max_refs=MAX_REFS):
         auto["source_files"] = summary_from_references(refs, data_base)
         auto["source_files"]["counted_from"] = "store references"
         data = [(u, 0, "") for u in refs]
+    if "source_files" not in auto and refs is None and containers and steps and None not in steps:
+        # Too many references to list and no listing: estimate from the time axis (see time_steps).
+        prefix = containers[0]
+        auto["source_files"] = {"path": relative(prefix, data_base), "url": https_url(prefix, config),
+                                "files": sum(steps),
+                                "estimated": True, "counted_from": "time steps (one file per step)"}
+        notes.append(f"source files estimated from {sum(steps):,} time steps, one file per step")
     refused = [f for f in (auto.get("source_files") or {}).get("formats", []) if f["format"].startswith("not readable")]
     if refused:
         notes.append(f"{sum(f['files'] for f in refused)} sampled source files refused an anonymous read; "
@@ -556,32 +593,57 @@ def collect(product, data_base, max_refs=MAX_REFS):
                 store_attributes=jsonable(dict(root.attrs)))
     if group_attributes:
         auto["group_attributes"] = group_attributes
-    if (product.get("metadata") or {}).get("netcdf_attributes"):
+    if (product.get("metadata") or {}).get("source_attributes"):
         if not data:
-            raise CollectError("metadata.netcdf_attributes is set but no source files were found")
+            raise CollectError("metadata.source_attributes is set but no source files were found")
         key, selected_by = newest(data)
-        url, attrs = netcdf_attributes(key)
-        auto["netcdf_attributes"] = {"file": pathlib.PurePosixPath(key).name, "url": url,
+        url, attrs = source_attributes(key)
+        auto["source_attributes"] = {"file": pathlib.PurePosixPath(key).name, "url": url,
                                      "attributes": attrs, "selected_by": selected_by}
     return auto
 
 
 def products_of(source):
+    """(front matter that names the Source Coop product, product source files).
+
+    A product with no `collection` stands alone (noaa-ohc, gobai-o2, noaa-oisst): it names its
+    own Source Coop product and is the root of the README tree.
+    """
     front = front_matter(source)
     if front.get("level") == "collection":
         return front, [(source.parent / f"{pid}.md") for pid in front.get("products") or []]
     if front.get("level") == "product":
-        coll = (source.parent / front.get("collection", "")).resolve()
+        if not front.get("collection"):
+            return front, [source]
+        coll = (source.parent / front["collection"]).resolve()
         if not coll.is_file():
             raise CollectError(f"{source}: collection source {coll} not found")
         return front_matter(coll), [source]
     raise CollectError(f"{source}: level must be collection or product")
 
 
+def stores_of(product):
+    """[(json file stem, store fields)]: one store, or each of a standalone product's `stores`.
+
+    A store in `stores` takes the product's fields, then its own (store_url, source_url, ...).
+    """
+    stores = [s for s in product.get("stores") or [] if isinstance(s, dict) and any(s.values())]
+    if not stores:
+        if not product.get("store_url"):
+            raise CollectError("no store_url")
+        return [(product["id"], product)]
+    out = []
+    for store in stores:
+        if not store.get("id") or not store.get("store_url"):
+            raise CollectError("every entry in stores needs id and store_url")
+        out.append((f"{product['id']}.{store['id']}", {**product, **store}))
+    return out
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("source", type=pathlib.Path, help="collection or product source file (.md)")
-    parser.add_argument("--out", type=pathlib.Path, required=True, help="directory for <product id>.json")
+    parser.add_argument("--out", type=pathlib.Path, required=True, help="directory for <product id>.json (<product id>.<store id>.json for each of a product's stores)")
     parser.add_argument("--max-refs", type=int, default=MAX_REFS,
                         help=f"most chunk references to list when counting source files (default {MAX_REFS:,}, "
                              "about 1.2 GB of memory; each million needs about 0.4 GB)")
@@ -600,21 +662,27 @@ def main(argv=None):
     for src in sources:
         try:
             product = front_matter(src)
-            for field in ("id", "store_url"):
-                if not product.get(field):
-                    raise CollectError(f"no {field}")
-            auto = collect(product, data_base, args.max_refs)
-        except Exception as exc:  # one unreadable store must not stop the others
+            if not product.get("id"):
+                raise CollectError("no id")
+            stores = stores_of(product)
+        except Exception as exc:
             print(f"collect_auto: {src}: {type(exc).__name__}: {exc}", file=sys.stderr)
             status = 1
             continue
-        if auto.get("_source_files"):
-            print(f"collect_auto: {src}: {auto['_source_files']}", file=sys.stderr)
-        if "source_files" not in auto:
-            print(f"collect_auto: {src}: no source_files", file=sys.stderr)
-        path = args.out / f"{product['id']}.json"
-        path.write_text(json.dumps(auto, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
-        print(f"wrote {path}")
+        for stem, store in stores:
+            try:
+                auto = collect(store, data_base, args.max_refs)
+            except Exception as exc:  # one unreadable store must not stop the others
+                print(f"collect_auto: {src} ({stem}): {type(exc).__name__}: {exc}", file=sys.stderr)
+                status = 1
+                continue
+            if auto.get("_source_files"):
+                print(f"collect_auto: {stem}: {auto['_source_files']}", file=sys.stderr)
+            if "source_files" not in auto:
+                print(f"collect_auto: {stem}: no source_files", file=sys.stderr)
+            path = args.out / f"{stem}.json"
+            path.write_text(json.dumps(auto, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+            print(f"wrote {path}")
     return status
 
 

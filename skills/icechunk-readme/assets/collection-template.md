@@ -57,7 +57,7 @@ netcdf_layout:               # optional, e.g. <dataset>/netcdf/[<version>/]<year
 # Documentation
 
 <!-- Required. Free sections, rendered in order to docs/documentation.md. Recommended:
-     About the data; The Icechunk stores; The viewer; NetCDF copies;
+     About the data; The Icechunk stores; The viewer; Source files;
      Known problems in the files; How this was built. -->
 
 ## About the data

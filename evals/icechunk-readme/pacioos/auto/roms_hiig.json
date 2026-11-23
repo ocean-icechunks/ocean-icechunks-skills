@@ -186,7 +186,7 @@
   "time_coverage_start": "2025-01-01T00:00:00Z",
   "title": "Regional Ocean Modeling System (ROMS): Main Hawaiian Islands: Forecast"
  },
- "netcdf_attributes": {
+ "source_attributes": {
   "file": "hiig_forec_20261118.nc",
   "url": "https://data.source.coop/ocean-icechunks/pacioos/roms_hiig/netcdf/2026/hiig_forec_20261118.nc",
   "attributes": {

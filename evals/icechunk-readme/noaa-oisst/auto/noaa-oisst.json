@@ -1,0 +1,375 @@
+{
+ "_comment": "Read from the store and its source files by collect_auto.py on 2026-11-23; do not edit by hand.",
+ "time_range": [
+  "1981-09-01",
+  "2026-11-16"
+ ],
+ "source_files": {
+  "format": "netcdf",
+  "path": "https://noaa-cdr-sea-surface-temp-optimum-interpolation-pds.s3.us-east-1.amazonaws.com/data/v2.1/avhrr/",
+  "url": "https://noaa-cdr-sea-surface-temp-optimum-interpolation-pds.s3.us-east-1.amazonaws.com/data/v2.1/avhrr/",
+  "files": 16513,
+  "formats_sampled": "first and last file in each of 543 folders, 40 of them spread evenly, 40 of 16,513 files",
+  "formats": [
+   {
+    "format": "NetCDF-4 (HDF5)",
+    "files": 40,
+    "first": "https://noaa-cdr-sea-surface-temp-optimum-interpolation-pds.s3.us-east-1.amazonaws.com/data/v2.1/avhrr/198109/oisst-avhrr-v02r01.19810901.nc",
+    "last": "https://noaa-cdr-sea-surface-temp-optimum-interpolation-pds.s3.us-east-1.amazonaws.com/data/v2.1/avhrr/202611/oisst-avhrr-v02r01.20261116_preliminary.nc"
+   }
+  ],
+  "counted_from": "store references"
+ },
+ "groups": [
+  "/daily",
+  "/monthly"
+ ],
+ "snapshot": "Z0RZCMCJM9TMVS2ECABG",
+ "last_update": "2026-11-18",
+ "virtual_chunk_containers": [
+  "s3://noaa-cdr-sea-surface-temp-optimum-interpolation-pds/"
+ ],
+ "variables": {
+  "/daily": [
+   {
+    "name": "anom",
+    "dims": [
+     "time",
+     "zlev",
+     "lat",
+     "lon"
+    ],
+    "units": "Celsius",
+    "long_name": "Daily sea surface temperature anomalies"
+   },
+   {
+    "name": "err",
+    "dims": [
+     "time",
+     "zlev",
+     "lat",
+     "lon"
+    ],
+    "units": "Celsius",
+    "long_name": "Estimated error standard deviation of analysed_sst"
+   },
+   {
+    "name": "ice",
+    "dims": [
+     "time",
+     "zlev",
+     "lat",
+     "lon"
+    ],
+    "units": "%",
+    "long_name": "Sea ice concentration"
+   },
+   {
+    "name": "sst",
+    "dims": [
+     "time",
+     "zlev",
+     "lat",
+     "lon"
+    ],
+    "units": "Celsius",
+    "long_name": "Daily sea surface temperature"
+   }
+  ],
+  "/monthly": [
+   {
+    "name": "anom_max",
+    "dims": [
+     "time",
+     "zlev",
+     "lat",
+     "lon"
+    ],
+    "units": "Celsius",
+    "long_name": "Monthly maximum of daily sea surface temperature anomaly"
+   },
+   {
+    "name": "anom_mean",
+    "dims": [
+     "time",
+     "zlev",
+     "lat",
+     "lon"
+    ],
+    "units": "Celsius",
+    "long_name": "Monthly mean of daily sea surface temperature anomaly"
+   },
+   {
+    "name": "anom_min",
+    "dims": [
+     "time",
+     "zlev",
+     "lat",
+     "lon"
+    ],
+    "units": "Celsius",
+    "long_name": "Monthly minimum of daily sea surface temperature anomaly"
+   },
+   {
+    "name": "anom_std",
+    "dims": [
+     "time",
+     "zlev",
+     "lat",
+     "lon"
+    ],
+    "units": "Celsius",
+    "long_name": "Monthly standard deviation of daily sea surface temperature anomaly"
+   },
+   {
+    "name": "err_max",
+    "dims": [
+     "time",
+     "zlev",
+     "lat",
+     "lon"
+    ],
+    "units": "Celsius",
+    "long_name": "Monthly maximum of daily estimated error standard deviation of sea surface temperature"
+   },
+   {
+    "name": "err_mean",
+    "dims": [
+     "time",
+     "zlev",
+     "lat",
+     "lon"
+    ],
+    "units": "Celsius",
+    "long_name": "Monthly mean of daily estimated error standard deviation of sea surface temperature"
+   },
+   {
+    "name": "err_min",
+    "dims": [
+     "time",
+     "zlev",
+     "lat",
+     "lon"
+    ],
+    "units": "Celsius",
+    "long_name": "Monthly minimum of daily estimated error standard deviation of sea surface temperature"
+   },
+   {
+    "name": "err_std",
+    "dims": [
+     "time",
+     "zlev",
+     "lat",
+     "lon"
+    ],
+    "units": "Celsius",
+    "long_name": "Monthly standard deviation of daily estimated error standard deviation of sea surface temperature"
+   },
+   {
+    "name": "ice_max",
+    "dims": [
+     "time",
+     "zlev",
+     "lat",
+     "lon"
+    ],
+    "units": "1",
+    "long_name": "Monthly maximum of daily sea ice concentration"
+   },
+   {
+    "name": "ice_mean",
+    "dims": [
+     "time",
+     "zlev",
+     "lat",
+     "lon"
+    ],
+    "units": "1",
+    "long_name": "Monthly mean of daily sea ice concentration"
+   },
+   {
+    "name": "ice_min",
+    "dims": [
+     "time",
+     "zlev",
+     "lat",
+     "lon"
+    ],
+    "units": "1",
+    "long_name": "Monthly minimum of daily sea ice concentration"
+   },
+   {
+    "name": "ice_std",
+    "dims": [
+     "time",
+     "zlev",
+     "lat",
+     "lon"
+    ],
+    "units": "1",
+    "long_name": "Monthly standard deviation of daily sea ice concentration"
+   },
+   {
+    "name": "sst_max",
+    "dims": [
+     "time",
+     "zlev",
+     "lat",
+     "lon"
+    ],
+    "units": "Celsius",
+    "long_name": "Monthly maximum of daily sea surface temperature"
+   },
+   {
+    "name": "sst_mean",
+    "dims": [
+     "time",
+     "zlev",
+     "lat",
+     "lon"
+    ],
+    "units": "Celsius",
+    "long_name": "Monthly mean of daily sea surface temperature"
+   },
+   {
+    "name": "sst_min",
+    "dims": [
+     "time",
+     "zlev",
+     "lat",
+     "lon"
+    ],
+    "units": "Celsius",
+    "long_name": "Monthly minimum of daily sea surface temperature"
+   },
+   {
+    "name": "sst_std",
+    "dims": [
+     "time",
+     "zlev",
+     "lat",
+     "lon"
+    ],
+    "units": "Celsius",
+    "long_name": "Monthly standard deviation of daily sea surface temperature"
+   }
+  ]
+ },
+ "coordinates": {
+  "/daily": [
+   {
+    "name": "time",
+    "size": 16513,
+    "as_of": "2026-11-18",
+    "values": "1981-09-01T12Z to 2026-11-16T12Z"
+   },
+   {
+    "name": "preliminary",
+    "on": "time",
+    "values": "true for the last 14, false before"
+   },
+   {
+    "name": "zlev",
+    "size": 1,
+    "values": "0 meters"
+   },
+   {
+    "name": "lat",
+    "size": 720,
+    "values": "−89.88 to 89.88 °N"
+   },
+   {
+    "name": "lon",
+    "size": 1440,
+    "values": "0.12 to 359.88 °E"
+   }
+  ],
+  "/monthly": [
+   {
+    "name": "time",
+    "size": 542,
+    "as_of": "2026-11-18",
+    "values": "1981-09-01T00Z to 2026-10-01T00Z"
+   },
+   {
+    "name": "zlev",
+    "size": 1,
+    "values": "0 meters"
+   },
+   {
+    "name": "lat",
+    "size": 720,
+    "values": "−89.88 to 89.88 °N"
+   },
+   {
+    "name": "lon",
+    "size": 1440,
+    "values": "0.12 to 359.88 °E"
+   }
+  ]
+ },
+ "store_attributes": {},
+ "group_attributes": {
+  "/daily": {
+   "title": "NOAA/NCEI 1/4 Degree Daily Optimum Interpolation Sea Surface Temperature (OISST) Analysis, Version 2.1 - Inter",
+   "source": "ICOADS, NCEP_GTS, GSFC_ICE, NCEP_ICE, Pathfinder_AVHRR, Navy_AVHRR, NOAA_ACSP",
+   "id": "oisst-avhrr-v02r01.20261116_preliminary.nc",
+   "naming_authority": "gov.noaa.ncei",
+   "summary": "NOAAs 1/4-degree Daily Optimum Interpolation Sea Surface Temperature (OISST) (sometimes referred to as Reynolds SST, which however also refers to earlier products at different resolution), currently available as version v02r01, is created by interpolating and extrapolating SST observations from different sources, resulting in a smoothed complete field. The sources of data are satellite (AVHRR) and in situ platforms (i.e., ships and buoys), and the specific datasets employed may change over time. At the marginal ice zone, sea ice concentrations are used to generate proxy SSTs.  A preliminary version of this file is produced in near-real time (1-day latency), and then replaced with a final version after 2 weeks. Note that this is the AVHRR-ONLY DOISST, available from Oct 1981, but there is a companion DOISST product that includes microwave satellite data, available from June 2002",
+   "cdm_data_type": "Grid",
+   "history": "Final file created using preliminary as first guess, and 3 days of AVHRR data. Preliminary uses only 1 day of AVHRR data.",
+   "date_modified": "2026-11-17T14:31:00Z",
+   "date_created": "2026-11-17T14:31:00Z",
+   "product_version": "Version v02r01",
+   "processing_level": "NOAA Level 4",
+   "institution": "NOAA/National Centers for Environmental Information",
+   "creator_url": "https://www.ncei.noaa.gov/",
+   "creator_email": "oisst-help@noaa.gov",
+   "keywords": "Earth Science > Oceans > Ocean Temperature > Sea Surface Temperature",
+   "keywords_vocabulary": "Global Change Master Directory (GCMD) Earth Science Keywords",
+   "platform": "Ships, buoys, Argo floats, MetOp-A, MetOp-B",
+   "platform_vocabulary": "Global Change Master Directory (GCMD) Platform Keywords",
+   "instrument": "Earth Remote Sensing Instruments > Passive Remote Sensing > Spectrometers/Radiometers > Imaging Spectrometers/Radiometers > AVHRR > Advanced Very High Resolution Radiometer",
+   "instrument_vocabulary": "Global Change Master Directory (GCMD) Instrument Keywords",
+   "standard_name_vocabulary": "CF Standard Name Table (v40, 25 January 2017)",
+   "geospatial_lat_min": -90.0,
+   "geospatial_lat_max": 90.0,
+   "geospatial_lon_min": 0.0,
+   "geospatial_lon_max": 360.0,
+   "geospatial_lat_units": "degrees_north",
+   "geospatial_lat_resolution": 0.25,
+   "geospatial_lon_units": "degrees_east",
+   "geospatial_lon_resolution": 0.25,
+   "time_coverage_start": "2026-11-16T00:00:00Z",
+   "time_coverage_end": "2026-11-16T23:59:59Z",
+   "metadata_link": "https://doi.org/10.25921/RE9P-PT57",
+   "ncei_template_version": "NCEI_NetCDF_Grid_Template_v2.0",
+   "comment": "Data was converted from NetCDF-3 to NetCDF-4 format with metadata updates in November 2017.",
+   "sensor": "Thermometer, AVHRR",
+   "Conventions": "CF-1.6, ACDD-1.3",
+   "references": "Reynolds, et al.(2007) Daily High-Resolution-Blended Analyses for Sea Surface Temperature (available at https://doi.org/10.1175/2007JCLI1824.1). Banzon, et al.(2016) A long-term record of blended satellite and in situ sea-surface temperature for climate monitoring, modeling and environmental studies (available at https://doi.org/10.5194/essd-8-165-2016). Huang et al. (2020) Improvements of the Daily Optimum Interpolation Sea Surface Temperature (DOISST) Version v02r01, submitted.Climatology is based on 1971-2000 OI.v2 SST. Satellite data: Pathfinder AVHRR SST, Navy AVHRR SST, and NOAA ACSPO SST. Ice data: NCEP Ice and GSFC Ice.",
+   "coordinates": "time zlev lat lon preliminary",
+   "Description": "Reynolds, et al.(2007) Daily High-resolution Blended Analyses. Available at ftp://eclipse.ncdc.noaa.gov/pub/OI-daily/daily-sst.pdf  Climatology is based on 1971-2000 OI.v2 SST, Satellite data: Navy  NOAA19 METOP AVHRR, Ice data: NCEP ice"
+  },
+  "/monthly": {
+   "title": "NOAA Optimum Interpolation SST v2.1 monthly statistics",
+   "summary": "Monthly minimum, maximum, mean and standard deviation of final daily NOAA OISST v2.1 fields, computed by this project from the daily/ group. Not a NOAA product.",
+   "Conventions": "CF-1.6, ACDD-1.3",
+   "source": "NOAA OISST v2.1 daily AVHRR-only final files",
+   "institution": "NERACOOS / Gulf of Maine Research Institute",
+   "creator_name": "NERACOOS / GMRI",
+   "history": "Monthly statistics computed from the daily/ group of this store by ohw26_oisst_icechunk.",
+   "platform": "Ships, buoys, Argo floats, MetOp-A, MetOp-B",
+   "geospatial_lat_min": -90.0,
+   "geospatial_lat_max": 90.0,
+   "geospatial_lon_min": 0.0,
+   "geospatial_lon_max": 360.0,
+   "geospatial_lat_units": "degrees_north",
+   "geospatial_lat_resolution": 0.25,
+   "geospatial_lon_units": "degrees_east",
+   "geospatial_lon_resolution": 0.25,
+   "sensor": "Thermometer, AVHRR",
+   "references": "Reynolds, et al.(2007) Daily High-Resolution-Blended Analyses for Sea Surface Temperature (available at https://doi.org/10.1175/2007JCLI1824.1). Banzon, et al.(2016) A long-term record of blended satellite and in situ sea-surface temperature for climate monitoring, modeling and environmental studies (available at https://doi.org/10.5194/essd-8-165-2016). Huang et al. (2020) Improvements of the Daily Optimum Interpolation Sea Surface Temperature (DOISST) Version v02r01, submitted.Climatology is based on 1971-2000 OI.v2 SST. Satellite data: Pathfinder AVHRR SST, Navy AVHRR SST, and NOAA ACSPO SST. Ice data: NCEP Ice and GSFC Ice."
+  }
+ }
+}

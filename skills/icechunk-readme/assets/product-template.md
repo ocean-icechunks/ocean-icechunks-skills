@@ -4,9 +4,12 @@
 # docs/metadata.md. Field rules: assets/schema.yaml. Variables, coordinates, groups,
 # snapshot, last update and global attributes are read from the store: do not write them here.
 # Provider, repository, code license and viewer URL are inherited from the collection.
+# A standalone product (no collection above it, e.g. noaa-ohc) drops `collection` and `row`,
+# and sets source_coop, provider, repository, code_license, credits and viewer name/url itself,
+# as a collection source does.
 level: product
 id:                          # folder name under the collection, e.g. roms_hiig
-collection: ../collection.md # relative path to the collection source file
+collection: ../collection.md # relative path to the collection source file; omit for a standalone product
 title:                       # e.g. PacIOOS ROMS Hawaiʻi forecast: Icechunk store, best time series
 row:                         # this product's row in the collection tables
   name:                      # e.g. ROMS ocean forecast
@@ -15,22 +18,30 @@ row:                         # this product's row in the collection tables
   store_note:                # optional, e.g. best time series
   time_coverage:             # optional: replaces the Time coverage cell when the store has no time axis
 store_url:                   # public HTTPS URL of the Icechunk store
-netcdf_url:                  # optional: public prefix of the NetCDF copies
+stores:                      # standalone product only, in place of store_url: stores that cannot share arrays
+  - id:                      # folder name, e.g. na
+    name:                    # e.g. North Atlantic
+    store_url:
+source_url:                  # optional: public prefix of the source files (NetCDF or HDF5)
 provider_page:               # optional header link
   label:                     # e.g. PacIOOS dataset page
   url:
 viewer:                      # required if the collection has a viewer
   variable:                  # variable shown first, e.g. temp
   view:                      # viewer state, e.g. px=0::py=0::alt=4000000::lat=20.5::lon=-158.2::dimIndices_time=0
-  fields:                    # optional per-variable table in documentation: {label, variable, view?}
+  group:                     # optional, store with groups: the group the viewer opens, e.g. daily
+  fields:                    # optional per-variable table in documentation: {label, variable, view?, group?}
     -
 groups_note:                 # required if the store has more than one group: why it is split
-coordinate_notes:            # optional: name -> plain-language Values cell, replacing the auto range
+coordinate_notes:            # optional: name (or group/name) -> plain-language Values cell, replacing the auto range
 order:                       # optional: row order the store does not keep
   variables:                 # e.g. [temp, salt, u, v, zeta, mask]
   coordinates:               # e.g. [time, depth, lat, lon]
   groups:                    # e.g. [/daily, /monthly]
-variable_notes:              # optional: name -> text when a variable has no standard_name
+variable_notes:              # optional: name (or group/name) -> text when a variable has no standard_name
+credits:                     # standalone product only (a collection carries them): list of {label, text}
+  - label:
+    text:
 code:
   python:
     python_version:          # minimum, e.g. "3.12"
@@ -63,7 +74,7 @@ provenance:
     url:
 citation_extra:              # optional, e.g. who runs the model
 metadata:
-  netcdf_attributes: false   # true adds the latest NetCDF file's attributes to metadata.md
+  source_attributes: false   # true adds the newest source file's attributes to metadata.md
 extra_sections:              # escape hatch, only when no field fits; say why
 ---
 
@@ -91,7 +102,7 @@ extra_sections:              # escape hatch, only when no field fits; say why
 
 ## Source files
 
-<!-- Required. One paragraph: what the files are, how they were copied, coverage and gaps. -->
+<!-- Required. One paragraph: what the files are, where they are kept, coverage and gaps. -->
 
 ## Caveats
 

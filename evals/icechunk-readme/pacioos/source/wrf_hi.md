@@ -11,7 +11,7 @@ row:
   short_name: WRF forecast, best time series
   store_note: hourly best time series
 store_url: https://data.source.coop/ocean-icechunks/pacioos/wrf_hi/icechunk
-netcdf_url: https://data.source.coop/ocean-icechunks/pacioos/wrf_hi/netcdf/
+source_url: https://data.source.coop/ocean-icechunks/pacioos/wrf_hi/netcdf/
 viewer:
   variable: Tair
   view: px=0::py=0::alt=4000000::lat=20.5::lon=-158.2::dimIndices_time=0

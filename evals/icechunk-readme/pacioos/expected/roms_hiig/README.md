@@ -136,11 +136,11 @@ Measured 2026-11-14 from a JupyterHub, with `zarr.config.set({"async.concurrency
 
 ## Citation and reuse
 
-**The data are PacIOOS's.** Any use of this store or the NetCDF copies should cite PacIOOS, as
+**The data are PacIOOS's.** Any use of this store or its source files should cite PacIOOS, as
 described at <https://www.pacioos.hawaii.edu/data-services/>. The model runs are produced by
 Brian Powell (University of Hawaiʻi at Mānoa).
 
-**The code** that copied the files and built the store was written by E. E. Holmes and is
+**The code** that built the store was written by E. E. Holmes and is
 released under the Apache License 2.0 at
 [ocean-icechunks/pacioos](https://github.com/ocean-icechunks/pacioos). It can be used without
 attribution.

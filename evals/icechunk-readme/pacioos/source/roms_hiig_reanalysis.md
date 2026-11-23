@@ -10,7 +10,7 @@ row:
   detail: "3-hourly, ~4 km, 36 depths"
   short_name: ROMS reanalysis v2.0
 store_url: https://data.source.coop/ocean-icechunks/pacioos/roms_hiig_reanalysis/icechunk
-netcdf_url: https://data.source.coop/ocean-icechunks/pacioos/roms_hiig_reanalysis/netcdf/v2.0/
+source_url: https://data.source.coop/ocean-icechunks/pacioos/roms_hiig_reanalysis/netcdf/v2.0/
 viewer:
   variable: temp
   view: px=0::py=0::alt=4000000::lat=20.5::lon=-158.2::dimIndices_time=0::dimIndices_depth=0

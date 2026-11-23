@@ -7,6 +7,6 @@ PyYAML>=6.0
 icechunk>=2.3
 xarray
 zarr>=3
-# collect_auto.py only: global attributes of a NetCDF-4/HDF5 file, when metadata.netcdf_attributes
+# collect_auto.py only: global attributes of a NetCDF-4/HDF5 file, when metadata.source_attributes
 # is set (NetCDF-3 headers need nothing extra). https://pypi.org/project/h5py/
 h5py>=3

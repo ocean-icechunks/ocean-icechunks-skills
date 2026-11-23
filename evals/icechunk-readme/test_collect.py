@@ -111,6 +111,13 @@ class Offline(unittest.TestCase):
         runs = xr.DataArray(np.array(["2026-11-01", "NaT", "2026-11-03"], dtype="datetime64[ns]"))
         self.assertEqual(collect.values_text(runs), "2026-11-01T00Z to 2026-11-03T00Z")
 
+    def test_boolean_values(self):
+        import numpy as np
+        import xarray as xr
+        tail = xr.DataArray(np.array([False] * 5 + [True] * 3), dims="time")
+        self.assertEqual(collect.values_text(tail), "true for the last 3, false before")
+        self.assertEqual(collect.values_text(xr.DataArray(np.array([True, False, True]), dims="t")), "true for 2 of 3")
+
     def test_https_url(self):
         class Opts:
             def __init__(self, endpoint_url, region):
@@ -135,6 +142,23 @@ class Offline(unittest.TestCase):
         base = "https://data.source.coop/ocean-icechunks/pacioos"
         self.assertEqual(collect.relative(base + "/wrf_hi/netcdf/", base), "wrf_hi/netcdf/")
         self.assertEqual(collect.relative("s3://other/x/", base), "s3://other/x/")
+
+    def test_standalone_product_stores(self):
+        """noaa-ohc: a product with no collection names its own Source Coop product and its stores."""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = pathlib.Path(tmp) / "noaa-ohc.md"
+            path.write_text("---\nlevel: product\nid: noaa-ohc\nsource_coop: {account: a, product: noaa-ohc}\n"
+                            "stores:\n  - {id: na, store_url: https://h/noaa-ohc/na}\n"
+                            "  - {id: np, store_url: https://h/noaa-ohc/np, source_url: https://h/files/np/}\n"
+                            "source_url: https://h/files/\n---\n", encoding="utf-8")
+            front, sources = collect.products_of(path)
+            self.assertEqual(front["source_coop"]["product"], "noaa-ohc")
+            self.assertEqual(sources, [path])
+            stores = collect.stores_of(collect.front_matter(path))
+        self.assertEqual([stem for stem, _ in stores], ["noaa-ohc.na", "noaa-ohc.np"])
+        self.assertEqual([s["source_url"] for _, s in stores], ["https://h/files/", "https://h/files/np/"])
+        self.assertEqual(collect.stores_of({"id": "x", "store_url": "https://h/x", "stores": [{"id": None}]}),
+                         [("x", {"id": "x", "store_url": "https://h/x", "stores": [{"id": None}]})])
 
     def test_newest_hourly_names(self):
         data = [("1994/hycom_GLBv0.08_530_1994010112_t000.nc", 1, "2020-08-18T00:00:00Z"),
@@ -201,10 +225,10 @@ class Live(unittest.TestCase):
         self.assertEqual(stable(live["coordinates"]["/"]), stable(frozen["coordinates"]["/"]))
         self.assertEqual(set(live["store_attributes"]), set(frozen["store_attributes"]))
         self.assertEqual(live["source_files"]["path"], frozen["source_files"]["path"])
-        nc = live["netcdf_attributes"]
+        nc = live["source_attributes"]
         self.assertEqual(nc["selected_by"], "filename date")
-        self.assertEqual(set(nc["attributes"]), set(frozen["netcdf_attributes"]["attributes"]))
-        self.assertGreaterEqual(nc["file"], frozen["netcdf_attributes"]["file"])
+        self.assertEqual(set(nc["attributes"]), set(frozen["source_attributes"]["attributes"]))
+        self.assertGreaterEqual(nc["file"], frozen["source_attributes"]["file"])
 
     def test_renders_from_collected_values(self):
         out = pathlib.Path(self.tmp.name) / "out"
@@ -249,7 +273,7 @@ class Live(unittest.TestCase):
         """wrf_hi files are NetCDF-4/HDF5, unlike roms_hiig's NetCDF-3, so h5py reads them."""
         endpoint, objects = collect.list_prefix("https://data.source.coop/ocean-icechunks/pacioos/wrf_hi/netcdf/2017/")
         key = next(k for k, _, _ in objects if k.endswith(".nc"))
-        _, attrs = collect.netcdf_attributes(f"{endpoint}/{key}")
+        _, attrs = collect.source_attributes(f"{endpoint}/{key}")
         self.assertIn("title", attrs)
         self.assertFalse(set(attrs) & collect.NC_INTERNAL)
 

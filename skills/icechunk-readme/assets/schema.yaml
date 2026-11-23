@@ -13,7 +13,7 @@
 #             metadata (docs/metadata.md), collection (the collection README's tables)
 #
 # Status: Experimental. Built from the PacIOOS collection and its roms_hiig product
-# (2026-11-21); other products may need more fields. Anything that does not fit goes in
+# (2026-11-21), then run on 19 other stores; other products may need more fields. Anything that does not fit goes in
 # `extra_sections` rather than a one-off edit to a rendered README.
 
 version: 1
@@ -43,47 +43,51 @@ collection:
     credits:          {required: true,  source: person, used_in: [README],
                        description: "List of {label, text} pairs, e.g. Data, Icechunk packaging, Tooling, Viewer. Markdown allowed in text. Tooling credits ocean-icechunks-skills: Eli Holmes, then Rich Signell, then other contributors."}
     netcdf_layout:    {required: false, source: person, used_in: [documentation],
-                       description: "URL pattern of the NetCDF copies, e.g. <dataset>/netcdf/[<version>/]<year>/<file>.nc"}
+                       description: "URL pattern of the source files, e.g. <dataset>/netcdf/[<version>/]<year>/<file>.nc"}
   body:
     "# README":
       "## Summary":        {required: true,  description: "One or two sentences: what the data are and who makes them. The README shows only this."}
       "## Citation":       {required: false, description: "Replaces the generated data citation ('The data are <provider>'s. Any use ... should cite <provider>, as described at <citation_url>.'). Products always use the generated sentence plus citation_extra."}
       "## Caveats":        {required: false, description: "Known gaps a reader must see before using the data."}
-    "# Documentation":     {required: true,  description: "Free sections in order, rendered to docs/documentation.md. Recommended headings: About the data; The Icechunk stores; The viewer; NetCDF copies; Known problems in the files; How this was built."}
+    "# Documentation":     {required: true,  description: "Free sections in order, rendered to docs/documentation.md. Recommended headings: About the data; The Icechunk stores; The viewer; Source files; Known problems in the files; How this was built."}
   auto:
     product_time_range: {from: "each store's time coordinate, first and last value (dates); the Time coverage column", used_in: [README]}
     product_last_update: {from: "time of the snapshot each store's main branch points at; 'Updated' under Icechunk in the Data cell", used_in: [README]}
-    product_source_files: {from: "anonymous listing of each product's source-file prefix (its netcdf_url): format (from the extension, e.g. netcdf), path, file count and total size; also the Data files link in Data access", used_in: [README]}
+    product_source_files: {from: "each product's source_files (see product auto): format, path, file count (or an estimate) and size when listed; also the Data files link in Data access", used_in: [README]}
     as_of:            {from: "render date and each store's last snapshot time", used_in: [documentation]}
 
 product:
   front_matter:
     level:            {required: true,  source: person, value: product}
-    id:               {required: true,  source: person, description: "Folder name under the collection, e.g. roms_hiig. Usually the provider's dataset id."}
-    collection:       {required: true,  source: person, description: "Relative path to the collection source file, for inherited fields."}
+    id:               {required: true,  source: person, description: "Folder name under the collection, e.g. roms_hiig, usually the provider's dataset id; for a standalone product, its Source Coop product, e.g. noaa-ohc."}
+    collection:       {required: false, source: person, description: "Relative path to the collection source file, for inherited fields. Omit for a standalone product: a product that is itself the Source Coop product (noaa-ohc, gobai-o2, noaa-oisst), whose README is at the product root and which sets the inherited fields and credits itself."}
     title:            {required: true,  source: person, used_in: [README, documentation, metadata]}
-    row:              {required: true,  source: person, used_in: [collection],
+    row:              {required: "if the product is in a collection", source: person, used_in: [collection],
                        description: "This product's row in the collection tables.",
                        fields: {name: "e.g. ROMS ocean forecast", detail: "e.g. daily runs; 3-hourly, ~4 km, 36 depths",
                                 short_name: "e.g. ROMS forecast, best time series", store_note: "e.g. best time series",
                                 time_coverage: "optional: replaces the Time coverage cell, for a store with no time axis, e.g. 'climatology, 1993 to 2021'"}}
-    store_url:        {required: true,  source: person, used_in: [README], description: "Public HTTPS URL of the Icechunk store."}
-    netcdf_url:       {required: false, source: person, used_in: [documentation], description: "Public prefix of the source files the store references (NetCDF or HDF5); collect_auto.py lists it for source_files and netcdf_attributes. Must answer an S3 listing: data.source.coop, an AWS bucket (https://<bucket>.s3.amazonaws.com/ or s3://), OSN. A plain web server (CoastWatch, NCEI) cannot be listed, and source_files is left out."}
+    store_url:        {required: "if the product has no stores list", source: person, used_in: [README], description: "Public HTTPS URL of the Icechunk store."}
+    stores:           {required: false, source: person, used_in: [README, documentation, metadata],
+                       description: "Standalone products only: several stores of one product that cannot share arrays (noaa-ohc: one per region, each on its own grid). Replaces store_url. The README lists them in a table, its tables are the first store's (a coordinate that differs shows each store's), and the loader takes store=. collect_auto.py writes <id>.<store id>.json for each. In a collection, each store is a product instead.",
+                       fields: {id: "folder name, e.g. na", name: "e.g. North Atlantic", store_url: "", source_url: "optional, as for the product", time_coverage: "optional, as row.time_coverage"}}
+    source_url:       {required: false, source: person, used_in: [documentation], description: "Public prefix of the source files the store references (NetCDF or HDF5); collect_auto.py lists it for source_files and source_attributes. Must answer an S3 listing: data.source.coop, an AWS bucket (https://<bucket>.s3.amazonaws.com/ or s3://), OSN. A plain web server (CoastWatch, NCEI) cannot be listed, and source_files is left out."}
     provider_page:    {required: false, source: person, used_in: [README], fields: {label: "e.g. PacIOOS dataset page", url: ""}}
     viewer:           {required: "if the collection has a viewer", source: person, used_in: [README, documentation, collection],
-                       description: "Opening view; the link is built from the collection viewer URL, store_url and these.",
+                       description: "Opening view; the link is built from the collection viewer URL, store_url (the first store's) and these. A standalone product's viewer also carries the collection-level fields name and url.",
                        fields: {variable: "variable shown first, e.g. temp", view: "viewer state after varname, e.g. px=0::py=0::alt=4000000::lat=20.5::lon=-158.2::dimIndices_time=0::dimIndices_depth=0",
-                                fields: "optional list of {label, variable, view} for the per-variable table in documentation"}}
+                                group: "optional, for a store with groups: the group the viewer opens, appended to the store URL (noaa-oisst: daily)",
+                                fields: "optional list of {label, variable, view, group} for the per-variable table in documentation"}}
     groups_note:      {required: "if the store has more than one group", source: person, used_in: [README],
                        description: "Why the store is split into groups, so nobody 'fixes' the split."}
     coordinate_notes: {required: false, source: person, used_in: [README],
-                       description: "Map of coordinate name to a plain-language Values cell, replacing the auto range, e.g. time: '2025-01-01T00Z to 7 days after the newest run, every 3 hours'."}
+                       description: "Map of coordinate name to a plain-language Values cell, replacing the auto range, e.g. time: '2025-01-01T00Z to 7 days after the newest run, every 3 hours'. A key 'group/name' applies in that group only and beats 'name' (noaa-oisst: daily/time, monthly/time)."}
     order:            {required: false, source: person, used_in: [README],
                        description: "Row order of the Variables and Coordinates tables, which the store does not keep. Names listed come first, in this order; the rest follow by rank, then name. A name the store lacks fails the render.",
                        fields: {variables: "e.g. [temp, salt, u, v, zeta, mask]", coordinates: "e.g. [time, forecast_reference_time, forecast_period, depth, lat, lon]",
                                 groups: "e.g. [/daily, /14day_v1, /14day]; also the order of the group tables in metadata"}}
     variable_notes:   {required: false, source: person, used_in: [README],
-                       description: "Map of variable name to text for the Standard name cell when it has none, e.g. mask."}
+                       description: "Map of variable name to text for the Standard name cell when it has none, e.g. mask. Keys may be 'group/name', as in coordinate_notes."}
     code:             {required: true,  source: person, used_in: [README],
                        description: "One entry per language, in link order; the collection's Code column lists them ('Python, R'). Python is the only language with a built-in snippet.",
                        fields: {python: {python_version: "minimum, e.g. 3.12 (rendered 'Python 3.12 or newer')",
@@ -107,10 +111,11 @@ product:
                                 how_made: "{file, url} of how_store_created.md", plan: "{label, url} of the planning issue"}}
     citation_extra:   {required: false, source: person, used_in: [README], description: "Added after the inherited citation, e.g. who runs the model."}
     metadata:         {required: false, source: person, used_in: [metadata],
-                       fields: {netcdf_attributes: "true to add the latest NetCDF file's attributes as a second table (forecasts, patched metadata)"}}
+                       fields: {source_attributes: "true to add the newest source file's attributes as a second table (forecasts, patched metadata)"}}
     extra_sections:   {required: false, source: person, used_in: [README],
                        description: "Escape hatch: list of {after, heading, file or text}. Use only when no field fits, and say why in the source file."}
-    provider:         {source: inherit}
+    credits:          {required: "if the product stands alone", source: person, used_in: [README], description: "As the collection's credits; a product in a collection has none of its own."}
+    provider:         {source: inherit, description: "a standalone product sets this and the next three itself"}
     repository:       {source: inherit}
     code_license:     {source: inherit}
     source_coop:      {source: inherit}
@@ -121,7 +126,7 @@ product:
       "## Notes":            {required: false, description: "Short paragraphs a reader needs before the tables, e.g. what 'best time series' means."}
       "## Variable notes":   {required: false, description: "Short lines after the tables, e.g. 'Land reads as NaN.'"}
       "## Example analyses": {required: true,  description: "One code block per language, run against the store, each step with a comment. One example subsets and then calls .chunk(); code.python.dask_example points to it."}
-      "## Source files":     {required: true,  description: "One paragraph: what the files are, how they were copied, coverage and gaps."}
+      "## Source files":     {required: true,  description: "One paragraph: what the files are, where they are kept, coverage and gaps."}
       "## Caveats":          {required: false, description: "Known gaps or anything unverified a reader must see in the README."}
     "# Documentation":       {required: true,  description: "Free sections in order, rendered to docs/documentation.md. The placeholder {{viewer_fields_table}} is replaced by the per-variable viewer table built from viewer.fields. A 'Source file format' section is generated from source_files.formats and placed after 'A virtual store', or at {{source_formats}}; a hand-written '## Source file format' section replaces it. Recommended headings: A virtual store; What the store adds over the files; The viewer; Where the metadata came from; The time axis; Opening the store: notes; Performance: why reads cost what they do; How the store was built and validated; Updates. 'A virtual store' is required for a virtual store (not enforced by the script); a materialized store (no virtual chunk containers, e.g. fish-pace/gobai-o2) says what it is instead."}
   auto:
@@ -133,5 +138,5 @@ product:
     store_attributes: {from: "store: root group attributes; may be empty when every group has its own", used_in: [metadata]}
     group_attributes: {from: "store: attributes of each non-root group that has any", used_in: [metadata]}
     virtual_chunk_containers: {from: "store: container URL prefixes; s3:// ones change the loader's credentials, none (materialized) drops them", used_in: [README]}
-    source_files:     {from: "anonymous listing of netcdf_url (format, path, url, files, size), or, when there is none or it cannot be listed, the files the store references (no size); counted_from says which; referenced is the store's count beside a listing; formats (each format found, with files checked and first and last file) and formats_sampled (which files were checked)", used_in: [collection, documentation]}
-    netcdf_attributes: {from: "latest NetCDF copy, when metadata.netcdf_attributes is true: {file, url, selected_by, attributes}", used_in: [metadata]}
+    source_files:     {from: "anonymous listing of source_url (format, path, url, files, size), or, when there is none or it cannot be listed, the files the store references (no size); counted_from says which; referenced is the store's count beside a listing; a store over --max-refs with no listing gets files from its time steps, estimated: true (one file per step; not for FMRC or best-time-series stores); formats (each format found, with files checked and first and last file) and formats_sampled (which files were checked)", used_in: [collection, documentation]}
+    source_attributes: {from: "newest source file, when metadata.source_attributes is true: {file, url, selected_by, attributes}", used_in: [metadata]}

@@ -23,10 +23,10 @@ for the main Hawaiian Islands.
 
 ## Citation and reuse
 
-**The data are PacIOOS's.** Any use of the NetCDF copies or the Icechunk stores should cite
+**The data are PacIOOS's.** Any use of the source files or the Icechunk stores should cite
 PacIOOS, as described at <https://www.pacioos.hawaii.edu/data-services/>.
 
-**The code** that copied the files and built the stores was written by E. E. Holmes and is
+**The code** that built the stores was written by E. E. Holmes and is
 released under the Apache License 2.0 at
 [ocean-icechunks/pacioos](https://github.com/ocean-icechunks/pacioos). It can be used without
 attribution.

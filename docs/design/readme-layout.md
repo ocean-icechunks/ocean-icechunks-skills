@@ -256,7 +256,7 @@ Fixed:
 - **Format sample capped at 40 files**: OISST has 543 monthly folders. Sizes under 0.1 TB print in GB
   (OISST 28 GB was "0.03 TB"). Scalar CF variables (`crs`) show "scalar" for dimensions.
 
-Open, for Eli:
+Open, for Eli (answered 2026-11-23, see "Decisions (Eli, 2026-11-23)" below):
 
 - **Where a product's README goes.** The renderer links `<collection>/<id>/README.md` and `docs/`.
   PacIOOS keeps the store one level down (`<id>/icechunk`); OHC, HYCOM and GOBAI-O2 *are* the
@@ -305,4 +305,71 @@ Seen, not changed: PACE stores carry a `palette` display variable and up to ten 
 (`/8Day/0p1deg/chunks_16`); FMRC stores (casco, necofs) have `time` = run time, so their time
 coverage is the run dates, not the forecast end; `fish-pace/coastwatch/ocean-heat` looks like an older
 copy of `noaa-ohc`.
+
+## Decisions (Eli, 2026-11-23)
+
+Answers to the open questions above, and what was built from them:
+
+- **Layout.** HYCOM moves to `hycom/<dataset>/icechunk`, `<dataset>/README.md`, `<dataset>/docs/`, like
+  PacIOOS (ocean-icechunks/hycom#27). `noaa-ohc` stays as it is: `na`, `np`, `sp` are regions of one
+  product, not products. `gobai-o2` is the same case. Both get a short README plus `docs/` at the product
+  root (ocean-icechunks/icechunks#49). Built: the **standalone product**. A product source with no
+  `collection` is itself the Source Coop product. It sets the collection's fields and `credits`, and
+  its pages render at the product root. An optional `stores` list replaces `store_url` for stores that
+  cannot share arrays. Its pages carry:
+  - A stores table with time coverage, source files and update date.
+  - The first store's tables; a coordinate that differs (OHC's lat/lon) shows each store's value, and
+    a part they share once.
+  - A loader with a `store=` argument.
+  - Per-store sections in documentation.md and metadata.md.
+  - `collect_auto.py` writes `<id>.<store>.json` per store.
+  Rendered from the live OHC stores, the loader read `np/14day` and `sp`. Rule: `stores` only for a
+  standalone product; in a collection each store is a product.
+- **"Copies" wording: neutral.** The generated text now says "the source files", "this store or its source
+  files", "The code that built the store", "Newest source file". The source's prose says whether files
+  were copied.
+- **Per-group notes.** Eli: "I don't know how to decide." Chosen: keys may be `group/name`, which beats
+  `name`. It is backward compatible, and OISST needed it.
+- **`source_url`** replaces `netcdf_url` (format neutral); `metadata.source_attributes` replaces
+  `metadata.netcdf_attributes` for the same reason.
+- **OISST: write it.** Eli will offer it to ocean-icechunks/noaa_oisst by PR; the maintainers decide.
+  Source and rendered files are in `evals/icechunk-readme/noaa-oisst/`. Written from the live store
+  (2026-11-23) and the maintainers' repo, which now publishes its pipeline (`src/ohw26_oisst_icechunk`,
+  `docs/operations.md`, BSD-3-Clause, Alex Kerney). Three things on the old page (`ocean-icechunks/icechunks`,
+  `noaa-oisst/README.md`, 2026-09-19) are no longer true:
+  - `daily/time` is now chunked 4,096 a chunk, so opening `daily` takes 1.6 s, not 7 s.
+  - `monthly` has its own long names, `cell_methods` and group attributes.
+  - `valid_min`/`valid_max` are gone from `monthly`.
+  Both hosts still send `Access-Control-Allow-Origin: *`. The store's newest snapshot was 2026-11-18,
+  five days before the check, although the workflow runs four times a day (noaa_oisst#4 "Current
+  icechunk status" is open). Added for it: `viewer.group` (the viewer opens `oisst.icechunk/daily`),
+  the provider's data link in a standalone header, and boolean coordinates described as "true for the
+  last 14, false before".
+- **Counts for stores with many references.** On this VM (15.6 GB cap):
+  - HYCOM: 10,451,265 chunks, 63,341 files, 31 s, peak 4.0 GB.
+  - ECCOFS best: 9,441,043 chunks, 170 files, 29 s, peak 2.7 GB.
+
+  Icechunk 2.3.1 has no partial or streaming reference API: `all_virtual_chunk_locations()` returns
+  one string per chunk, and an unauthorized read names only the container prefix. The others are
+  beyond the cap (PACE RRS 52 M, ECCOFS FMRC 68 M, GlobColour 127 M). Eli asked for a sampled estimate.
+  Built: one file per time step, for stores with a single time dimension, shown as "about N files
+  (estimate)". Checked against exact counts:
+
+  | Store | Steps | Files | |
+  |---|---|---|---|
+  | gomofs 2-D | 17,148 | 17,148 | exact |
+  | PACE CHL | 1,648 | 1,648 | exact |
+  | OHC na | 2,294 | 2,294 | exact |
+  | ECCOFS best | 170 | 170 | exact |
+  | HYCOM | 64,272 | 63,341 | 1.5% high |
+  | PACE KD | 1,790 | 895 | 2× (two groups read each file) |
+  | casco FMRC (time × step) | 576 | 3 | one file per run |
+  | ECCOFS FMRC (time × step) | 1,224 | 1,224 listed | one file per step |
+  | roms_hiig, txla (best series) | 5,545, 2,184 | 657, 69 | |
+
+  So FMRC stores (more than one time dimension) and best time series (a run time or lead along
+  `time`) get no estimate. Results: PACE RRS about 1,648 (estimate). GlobColour about 10,490
+  (estimate); its folder lists 10,610. ECCOFS FMRC 1,224 files, 9.29 TB, from a listing of
+  `s3://noaa-nos-eccofs-pds/avg/`. PACE's bucket refuses anonymous listing (requester pays) and,
+  per the pace-icechunks README, reads need Earthdata credentials from us-west-2.
 

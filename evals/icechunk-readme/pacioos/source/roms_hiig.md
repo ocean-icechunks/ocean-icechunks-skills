@@ -9,7 +9,7 @@ row:
   short_name: ROMS forecast, best time series
   store_note: best time series
 store_url: https://data.source.coop/ocean-icechunks/pacioos/roms_hiig/icechunk
-netcdf_url: https://data.source.coop/ocean-icechunks/pacioos/roms_hiig/netcdf/
+source_url: https://data.source.coop/ocean-icechunks/pacioos/roms_hiig/netcdf/
 provider_page:
   label: PacIOOS dataset page
   url: https://www.pacioos.hawaii.edu/metadata/roms_hiig.html
@@ -68,7 +68,7 @@ provenance:
     url: https://github.com/ocean-icechunks/pacioos/issues/10
 citation_extra: The model runs are produced by Brian Powell (University of Hawaiʻi at Mānoa).
 metadata:
-  netcdf_attributes: true
+  source_attributes: true
 ---
 
 # README
