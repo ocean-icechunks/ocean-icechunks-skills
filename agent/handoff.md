@@ -8,17 +8,23 @@ on anything under "Open threads".
 
 - Repo: `ocean-icechunks/ocean-icechunks-skills`, at `/home/jovyan/ocean-icechunks-skills`.
   (ocean-icechunks/icechunks#46 calls it `ocean-icechunks/skills`; Eli kept the current name, 2026-11-13.)
-- **Four skills, all Experimental:**
+- **Six skills, all Experimental:**
   - `virtual-icechunk`: moved from `nmfs-opensci/agent-skills` on 2026-11-13 with history (old commit
     messages cite `nmfs-opensci/agent-skills#N`). Decisions: [virtual-icechunk-skill.md](../docs/design/virtual-icechunk-skill.md).
   - `archive-to-cloud` (#8): audit, copy unchanged, verify. Decisions: [archive-to-cloud.md](../docs/design/archive-to-cloud.md).
   - `building-fmrc-virtual-icechunk` and `adding-ugrid-conventions`: contributed by Rich Signell (rsignell),
     merged 2026-11-19 (#17, #18).
+  - `icechunk-readme` (#21): README and `docs/` from a source file plus values read from the stores.
+    Decisions: [readme-layout.md](../docs/design/readme-layout.md).
+  - `icechunk-layout` (#35): the standard place for stores and docs on Source Coop, and `scan_layout.py`.
+    Decisions: [icechunk-layout.md](../docs/design/icechunk-layout.md).
 - **License: CC0-1.0** (Eli, 2026-11-13: "not really code"). `virtual-icechunk` was Apache-2.0 in
   agent-skills; every commit to it was by Eli or her agents, so nobody else's work was relicensed.
 - Hub install: `~/.agents/skills/<skill>` points at this checkout's `skills/<skill>`, and
   `~/.claude/skills/<skill>` points through it (`~/.gemini/config/skills` *is* `~/.agents/skills`).
   They follow whatever branch is checked out here. README install recipes were verified on 2026-11-13.
+  As of 2026-11-23 only `virtual-icechunk` and `archive-to-cloud` are linked; `icechunk-readme` and
+  `icechunk-layout` are not, so link them before the next task uses them.
 
 ## Working principles
 
@@ -40,7 +46,40 @@ on anything under "Open threads".
   from the README) mirrors `docs/other-icechunk-playbooks.md`; keep them in step. Its source HTML is gone:
   read it by URL and republish to the same URL.
 
+## Next task (Eli, 2026-11-23)
+
+Use the skills to update the READMEs of Eli's own Icechunk repositories, in this order:
+
+1. One that needs no file moves first. Suggested: **`ocean-icechunks/pacioos`**, the only one whose stores
+   are already in the standard places (`<product>/icechunk`); it lacks only the `docs/` folders. Its
+   source files are in `evals/icechunk-readme/pacioos/source/`; only `roms_hiig` is complete. Check
+   first: PacIOOS's `ops/dataset_readme.py` rewrites a block in each product README, and `wrf_hi`'s
+   README is PacIOOS's own.
+2. If Eli is happy: do the moves in ocean-icechunks/hycom#27 and ocean-icechunks/icechunks#49 (noaa-ohc,
+   gobai-o2), then rerender and see whether she still likes the README.
+3. The rest of her own: oa-indicators, pace-oci, globcolour. Not `eeholmes/cefi`: very experimental and
+   to be deleted (Eli, 2026-11-23).
+4. Only then PRs to other people's repositories: ocean-icechunks/noaa_oisst (README in
+   `evals/icechunk-readme/noaa-oisst/`), then GOMOFS and ECCOFS (#34).
+
+## Waiting in other repositories
+
+Filed from this repo's work; deal with them when coming back to the READMEs.
+
+- ocean-icechunks/hycom#27: move to `hycom/<dataset>/icechunk/`, `README.md`, `docs/` (and GOMb0.01 starts there).
+- ocean-icechunks/icechunks#49: noaa-ohc and gobai-o2, short README plus `docs/`, stores to `icechunk/<id>/`
+  (the 2026-11-23 comment corrects "the stores do not move").
+- fish-pace/pace-icechunks#3: PACE KD's `4km` groups have the 0.1° grid; not confirmed beyond shapes and counts.
+- ocean-icechunks/noaa_oisst: no issue; Eli to offer the OISST README by PR. Its newest snapshot was
+  2026-11-18 though the workflow runs four times a day (their #4 is open).
+- #34 here: GOMOFS and ECCOFS READMEs; no PRs to those repositories until the skill is settled.
+
 ## Recently shipped
+
+- **READMEs and layout** (#33, #36, merged 2026-11-23): `collect_auto.py` reads store values;
+  standalone products and several stores per product; neutral wording; `source_url`; file-count estimates
+  for stores too large to read their references; new skill `icechunk-layout`. Tested on 20 Source
+  Coop stores. #21 stays open (slice 4 not planned); #35 can be closed.
 
 - **s3:// vs https:// references** (#27 → #28, 2026-11-20): `s3_store` is 2–7× slower than `http_store` on
   endpoints that offer HTTP/2 (Source Coop, GCS, OSN); filed as earth-mover/icechunk#2571. Eli: an Icechunk
@@ -52,7 +91,7 @@ on anything under "Open threads".
 
 ## Open threads
 
-Reviewed 2026-11-21; all are under two weeks old.
+Reviewed 2026-11-23; all are under two weeks old.
 
 - **Ready, small, verified fixes**: #13 (`to_icechunk(encoding=…)` raises TypeError; still in 4 places,
   starting at `SKILL.md:171`) and #15 (`copy-script.md:30` still says re-upload a copy with no sidecar).
@@ -61,16 +100,8 @@ Reviewed 2026-11-21; all are under two weeks old.
   (two places the skill is wrong; one is #13). Mark that note harvested once #13/#14 land.
 - **#3** append alignment: decisions made, no skill edits; waits on Eli's upstream VirtualiZarr issue
   (drafted, not posted). [append-alignment-issue-21.md](../docs/design/append-alignment-issue-21.md).
-- **#21** standardized READMEs: skill `icechunk-readme` (slices 1–2 merged: #31, #32). Slice 3, reading
-  store values (`collect_auto.py`), is on branch `readme-collect-auto`. It was run on 19 more stores, and
-  Eli answered the open layout questions on 2026-11-23: standalone products (noaa-ohc, gobai-o2,
-  noaa-oisst), neutral wording, `source_url`, and file-count estimates. All are in
-  [readme-layout.md](../docs/design/readme-layout.md). Examples: `evals/icechunk-readme/pacioos/` and
-  `noaa-oisst/`; the OISST README is for Eli to offer to ocean-icechunks/noaa_oisst. Layout issues filed:
-  ocean-icechunks/hycom#27 and ocean-icechunks/icechunks#49.
-- **#35** layout skill `icechunk-layout` (branch `icechunk-layout`, on top of `readme-collect-auto`):
-  standard place `icechunk/` or `icechunk/<id>/`, stores versus groups, `scan_layout.py`. Decisions in
-  [icechunk-layout.md](../docs/design/icechunk-layout.md). GOMOFS and ECCOFS READMEs wait (#34).
+- **#21** standardized READMEs: slices 1 to 3 merged (#31, #32, #33). Slice 4 not planned. The
+  hand-written PacIOOS source text and counts are stale; Eli: refresh when the new READMEs are posted.
   Overlaps **#19** (documentation bundle), whose files now go in per-level `docs/` folders.
 - **#27** skill rule for s3:// vs https://: waits on earth-mover/icechunk#2571.
 - **#10** lessons from other playbooks: backlog; Eli's open question is whether keeping stores current is in scope.
