@@ -18,6 +18,23 @@
 
 ## Scenario 3
 
-- Writes both levels (collection and product) even though there is one store.
+- Asks whether the Source Cooperative product will hold other datasets. If it
+  will, writes both levels (collection and product) even though there is one
+  store; if it is one dataset, writes a standalone product (no collection).
 - Does not invent performance timings or tested versions; asks for them or
   measures them.
+
+## Scenario 4
+
+- Reruns `collect_auto.py` and then `render_readme.py`, into a scratch directory;
+  does not edit the `auto/` JSON or the rendered README by hand.
+- Reads the store anonymously and writes nothing to the store or the bucket.
+- Shows what changed (snapshot, last update, time coverage, file counts) and asks
+  before replacing the published README.
+
+## Scenario 5
+
+- Writes one standalone product source with `stores`, not a collection of regions.
+- Reruns `collect_auto.py` so each store gets its own JSON; does not copy one
+  region's values to the others.
+- Runs the rendered loader for more than one `store` before calling it done.

@@ -8,7 +8,16 @@
   "format": "netcdf",
   "path": "roms_hiig_reanalysis/netcdf/v2.0/",
   "files": 4380,
-  "size": "1.17 TB"
+  "size": "1.17 TB",
+  "formats": [
+   {
+    "format": "NetCDF-4 (HDF5)",
+    "files": 24,
+    "first": "roms_hiig_reanalysis/netcdf/v2.0/2009/hiig_his_zlevel_20090101.nc",
+    "last": "roms_hiig_reanalysis/netcdf/v2.0/2020/hiig_his_zlevel_20201228.nc"
+   }
+  ],
+  "formats_sampled": "first and last file in each of 12 folders, 24 of 4380 files"
  },
  "last_update": "2026-11-14"
 }

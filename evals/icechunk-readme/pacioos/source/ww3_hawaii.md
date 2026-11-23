@@ -11,6 +11,7 @@ row:
   short_name: WaveWatch III, best time series
   store_note: best time series, hourly, with flags on cold starts
 store_url: https://data.source.coop/ocean-icechunks/pacioos/ww3_hawaii/icechunk
+source_url: https://data.source.coop/ocean-icechunks/pacioos/ww3_hawaii/netcdf/
 viewer:
   variable: Thgt
   view: px=0::py=0::alt=4000000::lat=20.5::lon=-158.2::dimIndices_time=0

@@ -1,6 +1,6 @@
 # PacIOOS ROMS Hawaiʻi forecast: global metadata attributes
 
-_Generated from the store and the latest NetCDF copy on each update. Do not edit by hand; `ds.attrs` shows the current set._
+_Generated from the store and its newest source file on each update. Do not edit by hand; `ds.attrs` shows the current set._
 
 ## Published Icechunk dataset
 
@@ -67,7 +67,7 @@ Store: [https://data.source.coop/ocean-icechunks/pacioos/roms_hiig/icechunk](htt
 | <code>time&#95;coverage&#95;start</code> | <code>2025-01-01T00:00:00Z</code> |
 | <code>title</code> | <code>Regional Ocean Modeling System (ROMS): Main Hawaiian Islands: Forecast</code> |
 
-## Latest completed NetCDF copy
+## Newest source file
 
 File: [hiig_forec_20261118.nc](https://data.source.coop/ocean-icechunks/pacioos/roms_hiig/netcdf/2026/hiig_forec_20261118.nc). Selected by filename date. These are file attributes; other files may have different values.
 

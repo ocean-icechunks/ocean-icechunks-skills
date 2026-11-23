@@ -3,7 +3,8 @@
 
 Renders the PacIOOS collection and its roms_hiig product from pacioos/source/ with the frozen
 store values in pacioos/auto/, and compares the result with the hand-made files in
-pacioos/expected/. Line wrapping inside paragraphs is ignored (it does not change the rendered
+pacioos/expected/. noaa-oisst/ is a standalone product; its expected/ was rendered by the script
+and checked by reading, so it guards against regressions only. Line wrapping inside paragraphs is ignored (it does not change the rendered
 page); everything else must match. Needs PyYAML; no network.
 
     python3 -I evals/icechunk-readme/test_render.py
@@ -11,6 +12,7 @@ page); everything else must match. Needs PyYAML; no network.
 import contextlib
 import importlib.util
 import io
+import json
 import pathlib
 import shutil
 import sys
@@ -126,6 +128,219 @@ class RenderPacIOOS(unittest.TestCase):
         self.assertEqual(status, 1)
         self.assertIn("missing required section '## Summary'", err)
 
+    def auto_copy(self, edit):
+        """Copy the auto/ fixtures, apply edit(dict) to roms_hiig.json; return the directory."""
+        auto = pathlib.Path(tempfile.mkdtemp(dir=self.tmp)) / "auto"
+        shutil.copytree(HERE / "auto", auto)
+        path = auto / "roms_hiig.json"
+        values = json.loads(path.read_text(encoding="utf-8"))
+        edit(values)
+        path.write_text(json.dumps(values), encoding="utf-8")
+        return auto
+
+    def product_files(self, source, auto):
+        out = self.tmp / "out"
+        status, err = run(source, "--auto", auto, "--out", out)
+        self.assertEqual(status, 0, err)
+        return ((out / "README.md").read_text(encoding="utf-8"),
+                (out / "docs/documentation.md").read_text(encoding="utf-8"))
+
+    def test_order_overrides_store_order(self):
+        def shuffle(values):
+            values["variables"]["/"].reverse()
+            values["coordinates"]["/"].reverse()
+        auto = self.auto_copy(shuffle)
+        readme, _ = self.product_files(HERE / "source/roms_hiig.md", auto)
+        expected = (HERE / "expected/roms_hiig/README.md").read_text(encoding="utf-8")
+        self.assertEqual(unwrap(readme), unwrap(expected))
+
+    def test_order_names_unknown_variable(self):
+        path = self.edited("roms_hiig.md", "variables: [temp,", "variables: [tmep,")
+        status, err = run(path, "--auto", HERE / "auto", "--out", self.tmp / "out")
+        self.assertEqual(status, 1)
+        self.assertIn("order.variables names 'tmep'", err)
+
+    def test_source_format_section(self):
+        _, doc = self.product_files(HERE / "source/roms_hiig.md", HERE / "auto")
+        self.assertEqual(doc.count("## Source file format"), 1)
+        # A hand-written section of the same name replaces the generated one.
+        path = self.edited("roms_hiig.md", "## What the store adds over the files",
+                           "## Source file format\n\nHand-written.\n\n## What the store adds over the files")
+        _, doc = self.product_files(path, HERE / "auto")
+        self.assertEqual(doc.count("## Source file format"), 1)
+        self.assertIn("Hand-written.", doc)
+        self.assertNotIn("Files checked", doc)
+
+    def test_source_format_mixed(self):
+        def mixed(values):
+            f = values["source_files"]["formats"]
+            f.append({**f[0], "format": "NetCDF-4 (HDF5)"})
+        _, doc = self.product_files(HERE / "source/roms_hiig.md", self.auto_copy(mixed))
+        self.assertIn("not all in one format", doc)
+        self.assertIn("NetCDF-4 files are HDF5", doc)
+
+    def test_loader_credentials_follow_containers(self):
+        def s3(values):
+            values["virtual_chunk_containers"] = ["s3://some-bucket/"]
+        readme, _ = self.product_files(HERE / "source/roms_hiig.md", self.auto_copy(s3))
+        self.assertIn("icechunk.containers_credentials(", readme)
+        self.assertIn("icechunk.s3_anonymous_credentials()", readme)
+
+        def materialized(values):
+            values["virtual_chunk_containers"] = []
+        readme, _ = self.product_files(HERE / "source/roms_hiig.md", self.auto_copy(materialized))
+        self.assertNotIn("authorize_virtual_chunk_access", readme)
+
+    def test_groups(self):
+        """Arrays only in groups (noaa-ohc): group argument, group order, per-group attributes."""
+        def grouped(values):
+            for kind in ("variables", "coordinates"):
+                values[kind] = {"/daily": values[kind]["/"], "/14day": values[kind]["/"]}
+            values["groups"] = ["/14day", "/daily"]
+            values["group_attributes"] = {"/14day": {"title": "fourteen"}, "/daily": {"title": "one"}}
+            values["store_attributes"] = {}
+        path = self.edited("roms_hiig.md", "variable_notes:",
+                           "groups_note: Eras of the product.\nvariable_notes:")
+        text = path.read_text(encoding="utf-8").replace(
+            "  coordinates: [time,", "  groups: [/daily, /14day]\n  coordinates: [time,")
+        path.write_text(text, encoding="utf-8")
+        auto = self.auto_copy(grouped)
+        readme, _ = self.product_files(path, auto)
+        self.assertIn('def open_forecast(group="daily", ref="main", chunks=None):', readme)
+        self.assertIn("chunks=chunks, group=group)", readme)
+        self.assertLess(readme.index("### Group `/daily`"), readme.index("### Group `/14day`"))
+        meta = (self.tmp / "out/docs/metadata.md").read_text(encoding="utf-8")
+        self.assertIn("The root group has no attributes", meta)
+        self.assertLess(meta.index("### Group `/daily`"), meta.index("### Group `/14day`"))
+
+    def test_collection_row_overrides_and_external_files(self):
+        def external(values):
+            values["time_range"] = []
+            values["source_files"].update(path="s3://bucket/data/", url="https://bucket.s3.amazonaws.com/data/")
+        auto = self.auto_copy(external)
+        src = self.edited("roms_hiig.md", "  store_note: best time series\n",
+                          "  store_note: best time series\n  time_coverage: climatology\n")
+        out = self.tmp / "coll"
+        status, err = run(src.parent / "collection.md", "--auto", auto, "--out", out)
+        self.assertEqual(status, 0, err)
+        readme = (out / "README.md").read_text(encoding="utf-8")
+        self.assertIn("| climatology |", readme)
+        self.assertIn("[netcdf](https://bucket.s3.amazonaws.com/data/)", readme)
+
+    def test_refused_source_files_need_access_auth(self):
+        def refused(values):
+            values["source_files"]["formats"] = [{**values["source_files"]["formats"][0],
+                                                  "format": "not readable anonymously (HTTP 403)"}]
+        auto = self.auto_copy(refused)
+        status, err = run(HERE / "source/roms_hiig.md", "--auto", auto, "--out", self.tmp / "out")
+        self.assertEqual(status, 1)
+        self.assertIn("set access.auth", err)
+        path = self.edited("roms_hiig.md", "performance:", "access:\n  auth: NASA Earthdata login.\nperformance:")
+        readme, doc = self.product_files(path, auto)
+        self.assertNotIn("No credentials", readme)
+        self.assertIn("refused an anonymous read", doc)
+
+    def test_reference_counts_and_index_dimensions(self):
+        def refs(values):
+            sf = values["source_files"]
+            del sf["size"]
+            sf["counted_from"] = "store references"
+            values["coordinates"]["/"].append({"name": "node", "size": 305705, "no_coordinate": True})
+        auto = self.auto_copy(refs)
+        readme, _ = self.product_files(HERE / "source/roms_hiig.md", auto)
+        self.assertIn("| `node` | 305,705 | index only (no coordinate variable) |", readme)
+        out = self.tmp / "coll"
+        self.assertEqual(run(HERE / "source/collection.md", "--auto", auto, "--out", out)[0], 0)
+        self.assertIn("`roms_hiig/netcdf/`, 657 files<br>", (out / "README.md").read_text(encoding="utf-8"))
+
+    def standalone(self, change=None):
+        """roms_hiig.md as a standalone product (noaa-ohc's layout): its own collection fields, no row."""
+        coll, _, _ = render.read_source(HERE / "source/collection.md")
+        text = (HERE / "source/roms_hiig.md").read_text(encoding="utf-8")
+        end = text.index("\n---\n", 3)
+        front = yaml.safe_load(text[4:end])
+        for key in ("collection", "row"):
+            del front[key]
+        front.update({k: coll[k] for k in ("source_coop", "provider", "repository", "code_license", "credits")})
+        front["viewer"].update(name=coll["viewer"]["name"], url=coll["viewer"]["url"])
+        if change:
+            change(front)
+        path = pathlib.Path(tempfile.mkdtemp(dir=self.tmp)) / "roms_hiig.md"
+        path.write_text("---\n" + yaml.safe_dump(front, allow_unicode=True) + text[end + 1:], encoding="utf-8")
+        return path
+
+    def test_standalone_product(self):
+        readme, doc = self.product_files(self.standalone(), HERE / "auto")
+        web = "https://source.coop/ocean-icechunks/pacioos"  # the product root: no /roms_hiig
+        self.assertIn(f"**[Documentation]({web}/docs/documentation.md)**", readme)
+        self.assertIn("## Credits\n\n- **Data:** PacIOOS", readme)
+        self.assertIn("(in [`docs/`](https://data.source.coop/ocean-icechunks/pacioos/docs/))", readme)
+        self.assertIn(f"[`roms_hiig` Icechunk store]({web})", doc)
+        status, err = run(self.standalone(lambda f: f.pop("credits")), "--auto", HERE / "auto", "--out", self.tmp / "x")
+        self.assertEqual(status, 1)
+        self.assertIn("missing required field 'credits'", err)
+
+    def test_standalone_product_with_stores(self):
+        """noaa-ohc: one store per region, each on its own grid."""
+        base = "https://data.source.coop/ocean-icechunks/pacioos/roms_hiig"
+        def two_stores(front):
+            del front["store_url"]
+            front["stores"] = [{"id": "a", "name": "Region A", "store_url": f"{base}/a"},
+                               {"id": "b", "name": "Region B", "store_url": f"{base}/b"}]
+        auto = pathlib.Path(tempfile.mkdtemp(dir=self.tmp))
+        values = json.loads((HERE / "auto/roms_hiig.json").read_text(encoding="utf-8"))
+        (auto / "roms_hiig.a.json").write_text(json.dumps(values), encoding="utf-8")
+        lat = next(c for c in values["coordinates"]["/"] if c["name"] == "lat")
+        lat.update(size=99, values="1 to 2 °N")
+        values["variables"]["/"] = [v for v in values["variables"]["/"] if v["name"] != "mask"]
+        values["last_update"] = "2026-11-20"
+        (auto / "roms_hiig.b.json").write_text(json.dumps(values), encoding="utf-8")
+        readme, doc = self.product_files(self.standalone(two_stores), auto)
+        self.assertIn(f"| **Region B** (`b`) | `{base}/b` |", readme)
+        self.assertIn('def open_forecast(store="a", ref="main", chunks=None):', readme)
+        self.assertIn(f'    url = f"{base}/{{store}}"', readme)
+        self.assertIn("The tables are for `a`. `b` lacks `mask`.", readme)
+        self.assertRegex(readme, r"\| `lat` \| `a`: [\d,]+<br>`b`: 99 \| `a`: .*<br>`b`: 1 to 2 °N \|")
+        self.assertIn("| `depth` | 36 |", readme)  # the same in both stores: shown once
+        self.assertIn("`b` 2026-11-20,", readme)
+        self.assertIn("### Store `b`", doc)
+        meta = (self.tmp / "out/docs/metadata.md").read_text(encoding="utf-8")
+        self.assertIn("## Store `a`", meta)
+        self.assertIn("### Newest source file of `b`", meta)
+
+    def test_stores_need_a_standalone_product(self):
+        path = self.edited("roms_hiig.md", "store_url: https://",
+                           "stores:\n  - {id: a, store_url: https://x/a}\nstore_url: https://")
+        status, err = run(path, "--auto", HERE / "auto", "--out", self.tmp / "out")
+        self.assertEqual(status, 1)
+        self.assertIn("'stores' is for a standalone product", err)
+
+    def test_notes_keyed_by_group(self):
+        """noaa-oisst: `time` is days in daily and months in monthly."""
+        def grouped(values):
+            for kind in ("variables", "coordinates"):
+                values[kind] = {"/daily": values[kind]["/"], "/monthly": values[kind]["/"]}
+            values["groups"] = ["/daily", "/monthly"]
+        path = self.edited("roms_hiig.md", "coordinate_notes:\n",
+                           "groups_note: Two cadences.\ncoordinate_notes:\n  monthly/time: every month\n")
+        readme, _ = self.product_files(path, self.auto_copy(grouped))
+        daily, monthly = readme.split("### Group `/monthly`")
+        self.assertIn("| `time` | 5,545 (2026-11-19) | 2025-01-01T00Z to 7 days", daily)
+        self.assertIn("| `time` | 5,545 (2026-11-19) | every month |", monthly)
+
+    def test_estimated_file_count(self):
+        """A store too large to list its references (PACE RRS, 52 M chunks): files from its time steps."""
+        def estimated(values):
+            values["source_files"] = {"path": "s3://bucket/", "url": "https://bucket.s3.amazonaws.com/",
+                                      "files": 1648, "estimated": True, "counted_from": "time steps (one file per step)"}
+        auto = self.auto_copy(estimated)
+        out = self.tmp / "coll"
+        self.assertEqual(run(HERE / "source/collection.md", "--auto", auto, "--out", out)[0], 0)
+        self.assertIn("**Source files:** `s3://bucket/`, about 1,648 files (estimate)<br>",
+                      (out / "README.md").read_text(encoding="utf-8"))
+        readme, _ = self.product_files(self.standalone(), auto)
+        self.assertIn("Updated 2026-11-19. **Source files:** `s3://bucket/`, about 1,648 files (estimate).", readme)
+
     def test_blank_templates_fail_cleanly(self):
         for name in ("collection-template.md", "product-template.md"):
             with self.subTest(template=name):
@@ -139,11 +354,25 @@ class RenderPacIOOS(unittest.TestCase):
                 self.assertIn("missing required field 'title'", err)
 
 
+class RenderOISST(unittest.TestCase):
+    """noaa-oisst: a standalone product (no collection) with two groups and an s3:// container."""
+    def test_matches_expected(self):
+        here = HERE.parent / "noaa-oisst"
+        with tempfile.TemporaryDirectory() as tmp:
+            out = pathlib.Path(tmp)
+            status, err = run(here / "source/noaa-oisst.md", "--auto", here / "auto", "--out", out)
+            self.assertEqual(status, 0, err)
+            for name in FILES["product"]:
+                with self.subTest(file=name):
+                    self.assertEqual((out / name).read_text(encoding="utf-8"),
+                                     (here / "expected" / name).read_text(encoding="utf-8"))
+
+
 class Schema(unittest.TestCase):
     def test_templates_and_sources_use_only_schema_fields(self):
         schema = yaml.safe_load((SKILL / "assets/schema.yaml").read_text(encoding="utf-8"))
         files = [SKILL / "assets/collection-template.md", SKILL / "assets/product-template.md",
-                 *sorted((HERE / "source").glob("*.md"))]
+                 *sorted((HERE / "source").glob("*.md")), HERE.parent / "noaa-oisst/source/noaa-oisst.md"]
         for path in files:
             with self.subTest(file=path.name):
                 front, _, _ = render.read_source(path)

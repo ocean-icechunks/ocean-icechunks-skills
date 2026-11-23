@@ -8,7 +8,16 @@
   "format": "netcdf",
   "path": "roms_hiig/netcdf/",
   "files": 657,
-  "size": "1.25 TB"
+  "size": "1.25 TB",
+  "formats": [
+   {
+    "format": "NetCDF-3 classic",
+    "files": 4,
+    "first": "roms_hiig/netcdf/2025/hiig_forec_20250101.nc",
+    "last": "roms_hiig/netcdf/2026/hiig_forec_20261118.nc"
+   }
+  ],
+  "formats_sampled": "first and last file in each of 2 folders, 4 of 657 files"
  },
  "groups": [
   "/"
@@ -177,7 +186,7 @@
   "time_coverage_start": "2025-01-01T00:00:00Z",
   "title": "Regional Ocean Modeling System (ROMS): Main Hawaiian Islands: Forecast"
  },
- "netcdf_attributes": {
+ "source_attributes": {
   "file": "hiig_forec_20261118.nc",
   "url": "https://data.source.coop/ocean-icechunks/pacioos/roms_hiig/netcdf/2026/hiig_forec_20261118.nc",
   "attributes": {

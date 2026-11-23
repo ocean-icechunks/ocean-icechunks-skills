@@ -9,7 +9,7 @@ row:
   short_name: ROMS forecast, best time series
   store_note: best time series
 store_url: https://data.source.coop/ocean-icechunks/pacioos/roms_hiig/icechunk
-netcdf_url: https://data.source.coop/ocean-icechunks/pacioos/roms_hiig/netcdf/
+source_url: https://data.source.coop/ocean-icechunks/pacioos/roms_hiig/netcdf/
 provider_page:
   label: PacIOOS dataset page
   url: https://www.pacioos.hawaii.edu/metadata/roms_hiig.html
@@ -27,6 +27,9 @@ coordinate_notes:
   forecast_reference_time: the run each step comes from (NaT if no run covers it)
   forecast_period: hours since that run's start, 0 to 168
   depth: 0.25 to 5,500 m, positive down
+order:
+  variables: [temp, salt, u, v, zeta, mask]
+  coordinates: [time, forecast_reference_time, forecast_period, depth, lat, lon]
 variable_notes:
   mask: land/sea mask from the files (0 land, 1 water)
 code:
@@ -65,7 +68,7 @@ provenance:
     url: https://github.com/ocean-icechunks/pacioos/issues/10
 citation_extra: The model runs are produced by Brian Powell (University of Hawaiʻi at Mānoa).
 metadata:
-  netcdf_attributes: true
+  source_attributes: true
 ---
 
 # README

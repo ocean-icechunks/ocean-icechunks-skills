@@ -1,7 +1,9 @@
 # Scenarios: icechunk-readme
 
-Status: draft. The render script's own tests are in `test_render.py`
-(`python3 -I evals/icechunk-readme/test_render.py`; needs `requirements.txt`).
+Status: draft. The scripts' own tests are `test_render.py` (offline) and
+`test_collect.py` (reads the live PacIOOS stores; `ICECHUNK_README_OFFLINE=1` skips
+that part). Run each with `python3 -I evals/icechunk-readme/<test>.py`; they need
+`requirements.txt`.
 
 ## 1. Fill in a product source file from an existing README
 
@@ -14,10 +16,22 @@ source file for it.
 The agent is asked to "make this README shorter" for a product whose README holds
 a global attributes table, a long build history and a per-variable viewer table.
 
-## 3. New collection with one store
+## 3. New Source Cooperative product with one store
 
 The agent is asked to write the READMEs for a new Source Cooperative product that
 holds a single Icechunk store.
 
+## 4. Refresh a README after the store updated
+
+The agent is told that a product's store has new data and asked to bring its
+README up to date.
+
+## 5. One dataset in several stores
+
+The agent is asked to write the README for `ocean-icechunks/noaa-ohc`, whose
+`na`, `np` and `sp` stores are regions of one product on different grids.
+
 The PacIOOS files under `pacioos/` are the worked example: `source/` holds the
 filled-in source files and `expected/` the hand-made output they must reproduce.
+`noaa-oisst/` is a standalone product rendered by the script (its `expected/` guards against
+regressions; it was checked by reading, not made by hand).

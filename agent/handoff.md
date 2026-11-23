@@ -61,9 +61,13 @@ Reviewed 2026-11-21; all are under two weeks old.
   (two places the skill is wrong; one is #13). Mark that note harvested once #13/#14 land.
 - **#3** append alignment: decisions made, no skill edits; waits on Eli's upstream VirtualiZarr issue
   (drafted, not posted). [append-alignment-issue-21.md](../docs/design/append-alignment-issue-21.md).
-- **#21** standardized READMEs: layout settled by hand (2026-11-21); new skill `icechunk-readme` has the
-  schema, templates and an offline render script with tests (slices 1–2 of 4); reading values from the store next. [readme-layout.md](../docs/design/readme-layout.md);
-  example source and expected output in `evals/icechunk-readme/pacioos/`.
+- **#21** standardized READMEs: skill `icechunk-readme` (slices 1–2 merged: #31, #32). Slice 3, reading
+  store values (`collect_auto.py`), is on branch `readme-collect-auto`. It was run on 19 more stores, and
+  Eli answered the open layout questions on 2026-11-23: standalone products (noaa-ohc, gobai-o2,
+  noaa-oisst), neutral wording, `source_url`, and file-count estimates. All are in
+  [readme-layout.md](../docs/design/readme-layout.md). Examples: `evals/icechunk-readme/pacioos/` and
+  `noaa-oisst/`; the OISST README is for Eli to offer to ocean-icechunks/noaa_oisst. Layout issues filed:
+  ocean-icechunks/hycom#27 and ocean-icechunks/icechunks#49.
   Overlaps **#19** (documentation bundle), whose files now go in per-level `docs/` folders.
 - **#27** skill rule for s3:// vs https://: waits on earth-mover/icechunk#2571.
 - **#10** lessons from other playbooks: backlog; Eli's open question is whether keeping stores current is in scope.
