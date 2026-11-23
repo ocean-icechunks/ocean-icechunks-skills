@@ -68,6 +68,9 @@ Reviewed 2026-11-21; all are under two weeks old.
   [readme-layout.md](../docs/design/readme-layout.md). Examples: `evals/icechunk-readme/pacioos/` and
   `noaa-oisst/`; the OISST README is for Eli to offer to ocean-icechunks/noaa_oisst. Layout issues filed:
   ocean-icechunks/hycom#27 and ocean-icechunks/icechunks#49.
+- **#35** layout skill `icechunk-layout` (branch `icechunk-layout`, on top of `readme-collect-auto`):
+  standard place `icechunk/` or `icechunk/<id>/`, stores versus groups, `scan_layout.py`. Decisions in
+  [icechunk-layout.md](../docs/design/icechunk-layout.md). GOMOFS and ECCOFS READMEs wait (#34).
   Overlaps **#19** (documentation bundle), whose files now go in per-level `docs/` folders.
 - **#27** skill rule for s3:// vs https://: waits on earth-mover/icechunk#2571.
 - **#10** lessons from other playbooks: backlog; Eli's open question is whether keeping stores current is in scope.

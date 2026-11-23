@@ -46,6 +46,24 @@ Do not skip ahead. Each step gates the next.
 smoke test and the production build are both built from, plus the code for
 reading a finished store.
 
+## Layout: ask before the first build
+
+Where the store goes, and its README and docs, is part of the plan. Ask the user:
+
+1. **One dataset or several?** Several datasets that share a Source Cooperative
+   product make a collection (`<sc-product>/<product>/`); one dataset is a
+   standalone product.
+2. **More than one store?** Stores are different datasets within a product
+   (regions on their own grids, 2-D and 3-D output).
+3. **Groups?** Only for parts of one dataset: grouped in the files, or split
+   because the files force it.
+
+Standard place: `icechunk/` for a product's only store, `icechunk/<id>/` for
+each of several, with `README.md` and `docs/` beside them; never a store at the
+root. Name the layout in the plan, e.g. "standalone, several stores with groups:
+`noaa-ohc/icechunk/na/`, ...". The options in full, a scanner for existing products,
+and what moving a store touches are in the **icechunk-layout** skill.
+
 ## First, are the files where a store can reference them?
 
 A virtual store points at the source files where they sit, so they must be

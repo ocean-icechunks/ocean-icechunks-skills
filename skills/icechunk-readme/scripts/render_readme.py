@@ -229,6 +229,12 @@ def insert_extras(sections, extras, where, errors):
         sections.insert(anchors[0] + 1, block)
 
 
+def listed_stores(front):
+    """A product's `stores`, minus a template's empty `[{id: , name: , store_url: }]`."""
+    return [s for s in front.get("stores") or [] if isinstance(s, dict)
+            and not all(blank(v) for v in s.values())]
+
+
 def files_text(sf):
     """'**NetCDF:** `path`, 657 files, 1.2 TB': the source files, as counted by collect_auto.py.
 
@@ -271,30 +277,41 @@ def render_collection(source, auto_dir, products_dir, out):
             continue
         p, _, _ = read_source(psrc)
         pwhere = psrc.name
-        for field in ("id", "title", "row.name", "row.detail", "row.short_name", "store_url", "code"):
+        given = listed_stores(p)
+        for field in ("id", "title", "row.name", "row.detail", "row.short_name", "code") + (() if given else ("store_url",)):
             need(p, field, pwhere, errors)
         if viewer:
             need(p, "viewer.variable", pwhere, errors)
             need(p, "viewer.view", pwhere, errors)
-        auto = read_auto(auto_dir, pid, pwhere)
         if errors:
             continue
+        stores = [{**s, "auto": read_auto(auto_dir, f"{pid}.{s['id']}" if given else pid, pwhere)}
+                  for s in (given or [{"id": pid, "store_url": p["store_url"]}])]
         r, readme_url = p["row"], f"{web}/{pid}/README.md"
-        data, files_link = [], ""
-        sf = auto.get("source_files")
-        if sf:
-            data.append(files_text(sf))
-            files_link = f"[{sf.get('format', 'files')}]({files_url(sf, web)})"
-        data.append(f"**Icechunk:** `{p['store_url']}`" + (f", {r['store_note']}" if r.get("store_note") else ""))
-        if auto.get("last_update"):
-            data.append(f"Updated {auto['last_update']}")
+        several = len(stores) > 1
+        data, files_links, store_links = [], [], []
+        for s in stores:
+            # A product with several stores names each one; its row takes the span of their times.
+            label = f"`{s['id']}` " if several else ""
+            sf = s["auto"].get("source_files")
+            if sf:
+                data.append(label + files_text(sf))
+                files_links.append(f"[{s['id'] + ' ' if several else ''}{sf.get('format', 'files')}]({files_url(sf, web)})")
+            data.append(f"**Icechunk{' ' + s['id'] if several else ''}:** `{s['store_url']}`"
+                        + (f", {r['store_note']}" if r.get("store_note") and not several else ""))
+            store_links.append(f"[{s['id'] if several else 'icechunk'}]({browse_url(s['store_url'])})")
+        updates = [s["auto"]["last_update"] for s in stores if s["auto"].get("last_update")]
+        if updates:
+            data.append(f"Updated {max(updates)}")
+        spans = [s["auto"].get("time_range") for s in stores if len(s["auto"].get("time_range") or []) == 2]
+        coverage = f"{min(x[0] for x in spans)} to {max(x[1] for x in spans)}" if spans else ""
         rows.append([f"**{r['name']}** (`{pid}`), {r['detail']}", f"[README]({readme_url})",
-                     r.get("time_coverage") or time_coverage(auto), "<br>".join(data)])
+                     r.get("time_coverage") or coverage, "<br>".join(data)])
         code = ", ".join(f"[{LANGUAGES.get(lang, lang)}]({readme_url}#user-content-{lang})" for lang in p["code"])
-        cells = [r["short_name"], f"[icechunk]({browse_url(p['store_url'])})", files_link]
+        cells = [r["short_name"], ", ".join(store_links), ", ".join(files_links)]
         if viewer:
             v = p["viewer"]
-            cells.append(f"[{viewer['name']}]({viewer_link(viewer['url'], p['store_url'], v['variable'], v['view'], v.get('group'))})")
+            cells.append(f"[{viewer['name']}]({viewer_link(viewer['url'], stores[0]['store_url'], v['variable'], v['view'], v.get('group'))})")
         access.append(cells + [code])
     if errors:
         raise SourceError(*errors)
@@ -420,14 +437,15 @@ def ordered_groups(p, auto):
     return ordered(auto.get("groups") or ["/"], (p.get("order") or {}).get("groups"), key=lambda g: g)
 
 
-def order_errors(p, auto, where):
-    """Names in the source's `order` that the store does not have (a typo would be silently ignored)."""
+def order_errors(p, autos, where):
+    """Names in the source's `order` that no store has (a typo would be silently ignored)."""
+    autos = autos if isinstance(autos, list) else [autos]
     errors = []
     for kind in ("variables", "coordinates", "groups"):
         if kind == "groups":
-            have = set(auto.get("groups") or ["/"])
+            have = {g for a in autos for g in (a.get("groups") or ["/"])}
         else:
-            have = {x["name"] for group in (auto.get(kind) or {}).values() for x in group}
+            have = {x["name"] for a in autos for group in (a.get(kind) or {}).values() for x in group}
         for name in ((p.get("order") or {}).get(kind) or []):
             if name not in have:
                 errors.append(f"{where}: order.{kind} names '{name}', which the store does not have")
@@ -447,60 +465,56 @@ def coordinate_cells(c, cnotes, group):
     return size, values
 
 
-def variables_section(p, stores, readme):
-    """Tables from the first store; with several stores, a coordinate that differs shows each store's."""
-    auto = stores[0]["auto"]
-    groups = ordered_groups(p, auto)
+def same_structure(stores):
+    """True when every store has the same groups and, in each, the same variable names (noaa-ohc)."""
+    shape = lambda s: {g: sorted(v["name"] for v in vs) for g, vs in s["auto"]["variables"].items()}  # noqa: E731
+    return all(shape(s) == shape(stores[0]) for s in stores[1:])
+
+
+def group_tables(p, stores, group, notes, cnotes):
+    """Variables and coordinates of one group; a coordinate that differs between stores shows each."""
     order = p.get("order") or {}
+    auto = stores[0]["auto"]
+    blocks = [table(["Variable", "Dimensions", "Units", "Standard name"], [
+        [f"`{v['name']}`", ", ".join(v["dims"]) or "scalar", v.get("units", ""),
+         v.get("standard_name") or note(notes, group, v["name"]) or v.get("long_name", "")]
+        for v in ordered(auto["variables"][group], order.get("variables"))])]
+    coords = []
+    for c in ordered(auto["coordinates"][group], order.get("coordinates")):
+        cells = {}
+        for s in stores:
+            x = next((x for x in s["auto"]["coordinates"].get(group, []) if x["name"] == c["name"]), None)
+            cells[s["id"]] = coordinate_cells(x, cnotes, group) if x else ("absent", "")
+        # noaa-ohc: each region has its own lat/lon grid; a part all stores share is shown once.
+        size, values = ("<br>".join(f"`{sid}`: {x[i]}" for sid, x in cells.items())
+                        if len({x[i] for x in cells.values()}) > 1 else cells[stores[0]["id"]][i]
+                        for i in (0, 1))
+        coords.append([f"`{c['name']}`", size, values])
+    blocks.append(table(["Coordinate", "Size", "Values"], coords))
+    return blocks
+
+
+def variables_section(p, stores, readme):
+    """One set of tables when the stores share their variables (noaa-ohc), else tables per store
+    (noaa-gomofs: 2-D and 3-D fields)."""
     notes, cnotes = p.get("variable_notes") or {}, p.get("coordinate_notes") or {}
     blocks = ["## Variables and coordinates"]
+    shared = same_structure(stores)
     if len(stores) > 1:
-        blocks.append(store_differences(stores, groups))
-    if len(groups) > 1:
+        blocks.append("Every store has the same variables; where a coordinate differs, each store's is shown."
+                      if shared else "The stores hold different variables, so each has its own tables.")
+    if any(len(s["auto"].get("groups") or ["/"]) > 1 for s in stores):
         blocks.append(p["groups_note"])
-    for group in groups:
-        if len(groups) > 1:
-            blocks.append(f"### Group `{group}`")
-        blocks.append(table(["Variable", "Dimensions", "Units", "Standard name"], [
-            [f"`{v['name']}`", ", ".join(v["dims"]) or "scalar", v.get("units", ""),
-             v.get("standard_name") or note(notes, group, v["name"]) or v.get("long_name", "")]
-            for v in ordered(auto["variables"][group], order.get("variables"))]))
-        coords = []
-        for c in ordered(auto["coordinates"][group], order.get("coordinates")):
-            cells = {}
-            for s in stores:
-                x = next((x for x in s["auto"]["coordinates"].get(group, []) if x["name"] == c["name"]), None)
-                cells[s["id"]] = coordinate_cells(x, cnotes, group) if x else ("absent", "")
-            # noaa-ohc: each region has its own lat/lon grid; a part all stores share is shown once.
-            size, values = ("<br>".join(f"`{sid}`: {x[i]}" for sid, x in cells.items())
-                            if len({x[i] for x in cells.values()}) > 1 else cells[stores[0]["id"]][i]
-                            for i in (0, 1))
-            coords.append([f"`{c['name']}`", size, values])
-        blocks.append(table(["Coordinate", "Size", "Values"], coords))
+    for subset in ([stores] if shared else [[s] for s in stores]):
+        if not shared:
+            blocks.append(f"### Store `{subset[0]['id']}`")
+        groups = ordered_groups(p, subset[0]["auto"])
+        for group in groups:
+            if len(groups) > 1:
+                blocks.append(f"{'###' if shared else '####'} Group `{group}`")
+            blocks += group_tables(p, subset, group, notes, cnotes)
     blocks.append(readme.get("Variable notes", ""))
     return "\n\n".join(b for b in blocks if b)
-
-
-def store_differences(stores, groups):
-    """One sentence on what the tables cover when a product has several stores."""
-    first = stores[0]
-    names = lambda s, g, kind: {x["name"] for x in s["auto"][kind].get(g, [])}
-    lines = []
-    for s in stores[1:]:
-        for g in groups:
-            gone = names(first, g, "variables") - names(s, g, "variables")
-            more = names(s, g, "variables") - names(first, g, "variables")
-            where = f" in `{g}`" if len(groups) > 1 else ""
-            if gone:
-                lines.append(f"`{s['id']}` lacks {join_and(f'`{n}`' for n in sorted(gone))}{where}.")
-            if more:
-                lines.append(f"`{s['id']}` adds {join_and(f'`{n}`' for n in sorted(more))}{where}.")
-        if set(s["auto"].get("groups") or ["/"]) != set(first["auto"].get("groups") or ["/"]):
-            lines.append(f"`{s['id']}` has other groups: {join_and(f'`{g}`' for g in s['auto']['groups'])}.")
-    if not lines:
-        return ("Every store has the same variables" + (" and groups" if len(groups) > 1 else "")
-                + "; where a coordinate differs, each store's is shown.")
-    return f"The tables are for `{first['id']}`. " + " ".join(lines)
 
 
 FORMAT_NOTES = {
@@ -607,9 +621,7 @@ def product_setting(source, front, where):
     A standalone product (noaa-ohc, gobai-o2, noaa-oisst) is itself the Source Coop product: it
     sets those fields, its viewer carries name and url, and its README is at the product root.
     """
-    # A template's empty `stores: [{id: , name: , store_url: }]` means none.
-    front["stores"] = [s for s in front.get("stores") or [] if isinstance(s, dict)
-                       and not all(blank(v) for v in s.values())] or None
+    front["stores"] = listed_stores(front) or None
     if blank(front.get("collection")):
         errors = []
         for field in INHERITED + ("credits",):
@@ -621,8 +633,6 @@ def product_setting(source, front, where):
         viewer = front.get("viewer") or {}
         web, data_base = urls(front)
         return front, (viewer if viewer.get("url") else {}), web, data_base
-    if front.get("stores"):
-        raise SourceError(f"{where}: 'stores' is for a standalone product; in a collection each store is a product")
     cpath = (source.parent / front["collection"]).resolve()
     if not cpath.is_file():
         raise SourceError(f"{where}: collection source {front['collection']} not found")
@@ -672,7 +682,8 @@ def render_product(source, auto_dir, out):
                 errors.extend(exc.args)
     auto = stores[0]["auto"] if stores else {}
     errors = check_schema("product", front, readme, documentation, where,
-                          {"collection_viewer": cviewer, "groups": auto.get("groups"),
+                          {"collection_viewer": cviewer,  # groups_note is needed if any store has groups
+                           "groups": max((s["auto"].get("groups") or ["/"] for s in stores), key=len, default=None),
                            "standalone": standalone, "stores": front.get("stores")}) + errors
     if not blank(front.get("code")):
         for lang in front["code"]:
@@ -694,7 +705,7 @@ def render_product(source, auto_dir, out):
                 errors.append(f"{where}: store values for {sid} lack '{field}'")
         if "store_attributes" not in a:  # {} is real: noaa-ohc keeps its attributes per group
             errors.append(f"{where}: store values for {sid} lack 'store_attributes'")
-        errors += order_errors(front, a, where) if s is stores[0] else []
+        errors += order_errors(front, [x["auto"] for x in stores], where) if s is stores[0] else []
         formats = (a.get("source_files") or {}).get("formats") or []
         if any(f["format"].startswith("not readable") for f in formats) and not (front.get("access") or {}).get("auth"):
             # pace-oci: the README would otherwise promise "No credentials and no account".

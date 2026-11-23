@@ -1,0 +1,5 @@
+# For evals/icechunk-layout/test_scan.py and skills/icechunk-layout/scripts/scan_layout.py.
+# The listing needs nothing beyond Python 3.10+; these are for --groups (and the live test that uses it).
+# https://pypi.org/project/icechunk/ https://pypi.org/project/zarr/
+icechunk>=2.3
+zarr>=3

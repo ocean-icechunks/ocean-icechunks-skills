@@ -299,21 +299,55 @@ class RenderPacIOOS(unittest.TestCase):
         self.assertIn(f"| **Region B** (`b`) | `{base}/b` |", readme)
         self.assertIn('def open_forecast(store="a", ref="main", chunks=None):', readme)
         self.assertIn(f'    url = f"{base}/{{store}}"', readme)
-        self.assertIn("The tables are for `a`. `b` lacks `mask`.", readme)
-        self.assertRegex(readme, r"\| `lat` \| `a`: [\d,]+<br>`b`: 99 \| `a`: .*<br>`b`: 1 to 2 °N \|")
-        self.assertIn("| `depth` | 36 |", readme)  # the same in both stores: shown once
+        # b lacks mask, so each store gets its own tables (noaa-gomofs 2-D and 3-D).
+        self.assertIn("The stores hold different variables, so each has its own tables.", readme)
+        a_part, b_part = readme.split("### Store `b`")
+        self.assertIn("| `mask` |", a_part.split("### Store `a`")[1])
+        self.assertNotIn("| `mask` |", b_part.split("## Data access")[0])
+        self.assertIn("| `lat` | 99 | 1 to 2 °N |", b_part)
         self.assertIn("`b` 2026-11-20,", readme)
         self.assertIn("### Store `b`", doc)
         meta = (self.tmp / "out/docs/metadata.md").read_text(encoding="utf-8")
         self.assertIn("## Store `a`", meta)
         self.assertIn("### Newest source file of `b`", meta)
 
-    def test_stores_need_a_standalone_product(self):
-        path = self.edited("roms_hiig.md", "store_url: https://",
-                           "stores:\n  - {id: a, store_url: https://x/a}\nstore_url: https://")
-        status, err = run(path, "--auto", HERE / "auto", "--out", self.tmp / "out")
-        self.assertEqual(status, 1)
-        self.assertIn("'stores' is for a standalone product", err)
+    def test_stores_with_the_same_variables(self):
+        """noaa-ohc: one set of tables; a coordinate that differs shows each store's, a shared one once."""
+        base = "https://data.source.coop/ocean-icechunks/pacioos/roms_hiig"
+        def two(front):
+            del front["store_url"]
+            front["stores"] = [{"id": "a", "store_url": f"{base}/a"}, {"id": "b", "store_url": f"{base}/b"}]
+        auto = pathlib.Path(tempfile.mkdtemp(dir=self.tmp))
+        values = json.loads((HERE / "auto/roms_hiig.json").read_text(encoding="utf-8"))
+        (auto / "roms_hiig.a.json").write_text(json.dumps(values), encoding="utf-8")
+        next(c for c in values["coordinates"]["/"] if c["name"] == "lat").update(size=99, values="1 to 2 °N")
+        (auto / "roms_hiig.b.json").write_text(json.dumps(values), encoding="utf-8")
+        readme, _ = self.product_files(self.standalone(two), auto)
+        self.assertIn("Every store has the same variables", readme)
+        self.assertNotIn("### Store", readme)
+        self.assertRegex(readme, r"\| `lat` \| `a`: [\d,]+<br>`b`: 99 \| `a`: .*<br>`b`: 1 to 2 °N \|")
+        self.assertIn("| `depth` | 36 |", readme)
+
+    def test_collection_product_with_stores(self):
+        """A product in a collection may have several stores: its row and access cells name each."""
+        base = "https://data.source.coop/ocean-icechunks/pacioos/roms_hiig/icechunk"
+        src = self.edited("roms_hiig.md", "store_url: https://data.source.coop/ocean-icechunks/pacioos/roms_hiig/icechunk\n",
+                          f"stores:\n  - {{id: a, store_url: {base}/a}}\n  - {{id: b, store_url: {base}/b}}\n")
+        auto = pathlib.Path(tempfile.mkdtemp(dir=self.tmp))
+        for name in ("roms_hiig_reanalysis", "wrf_hi", "ww3_hawaii"):
+            shutil.copy(HERE / f"auto/{name}.json", auto)
+        values = json.loads((HERE / "auto/roms_hiig.json").read_text(encoding="utf-8"))
+        for sid in ("a", "b"):
+            (auto / f"roms_hiig.{sid}.json").write_text(json.dumps(values), encoding="utf-8")
+        out = self.tmp / "coll"
+        status, err = run(src.parent / "collection.md", "--auto", auto, "--out", out)
+        self.assertEqual(status, 0, err)
+        readme = (out / "README.md").read_text(encoding="utf-8")
+        self.assertIn(f"**Icechunk a:** `{base}/a`<br>", readme)
+        self.assertIn("[a](https://source.coop/ocean-icechunks/pacioos/roms_hiig/icechunk/a), [b](", readme)
+        status, err = run(src, "--auto", auto, "--out", self.tmp / "p")
+        self.assertEqual(status, 0, err)
+        self.assertIn('def open_forecast(store="a",', (self.tmp / "p/README.md").read_text(encoding="utf-8"))
 
     def test_notes_keyed_by_group(self):
         """noaa-oisst: `time` is days in daily and months in monthly."""

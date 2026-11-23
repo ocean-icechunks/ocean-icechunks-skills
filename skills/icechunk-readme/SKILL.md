@@ -10,23 +10,27 @@ collection (PacIOOS, Source Cooperative, November 2026). The scripts were also
 run on 19 other stores on Source Cooperative (`ocean-icechunks`, `fish-pace`);
 several PacIOOS assumptions remain (see the design note). Say so when you use them.
 
-## Two levels
+## Layout first
 
-- **Collection**: a Source Cooperative product holding several stores, e.g.
-  `ocean-icechunks/pacioos`.
-- **Product**: one store's folder in it, e.g. `pacioos/roms_hiig`. A Source
-  Cooperative product that holds, or will hold, several datasets is a
-  collection even while it has one store (`hycom`).
-- **Standalone product**: a Source Cooperative product that is one dataset, not
-  a collection, e.g. `ocean-icechunks/noaa-ohc` (one store per region),
-  `fish-pace/gobai-o2` or `ocean-icechunks/noaa-oisst`. It has the product
-  pages at its root and no collection README. Its source drops `collection`
-  and `row`, sets the fields a collection would (`source_coop`, `provider`,
-  `repository`, `code_license`, `credits`, viewer `name` and `url`), and lists
-  `stores` when it has several that cannot share arrays (noaa-ohc's regions are
-  on different grids). In a collection, each store is a product instead.
+Before writing or updating a README, find the product's layout with the
+`icechunk-layout` skill: run its `scan_layout.py` on the Source Coop product, tell
+the user which layout it looks like and what the other options are, and ask. If the
+stores are not in the standard places, say so and list the moves; the owner decides
+whether to make them. Without that skill, list the product's folders and ask.
 
-Each level has a short `README.md` and a `docs/` folder:
+The layouts, briefly:
+
+- **Collection**: a Source Cooperative product holding several datasets, each a
+  product in its own folder, e.g. `ocean-icechunks/pacioos`. It is a collection even
+  while it has one product, if more will come (`hycom`).
+- **Standalone product**: a Source Cooperative product that is one dataset, e.g.
+  `ocean-icechunks/noaa-ohc`, `fish-pace/gobai-o2`, `ocean-icechunks/noaa-oisst`. Its
+  pages are at the root and there is no collection README. Its source drops
+  `collection` and `row` and sets the fields a collection would (`source_coop`,
+  `provider`, `repository`, `code_license`, `credits`, viewer `name` and `url`).
+- **Product shape**, in either: one store (`icechunk/`), with or without groups, or
+  several stores (`icechunk/<id>/`, listed in `stores`), some or all with groups.
+  Stores are different datasets within a product; groups are parts of one dataset.
 
 ```
 <collection>/README.md                 what it is, products table, data access table, citation, credits
@@ -34,9 +38,10 @@ Each level has a short `README.md` and a `docs/` folder:
 <collection>/<product>/README.md       summary, variables, Python access, performance, provenance, citation
 <collection>/<product>/docs/documentation.md   everything else; build files, notebooks, requirements.txt
 <collection>/<product>/docs/metadata.md        global attributes, generated, never hand-edited
+<collection>/<product>/icechunk/               the store, or icechunk/<id>/ for each of several
 
 <product>/README.md, <product>/docs/...         a standalone product: the same product pages at its root
-<product>/<store>/                              its store, or each of its stores
+<product>/icechunk/                             its store, or icechunk/<id>/ for each of several
 ```
 
 ## Rules
@@ -126,9 +131,12 @@ python3 scripts/collect_auto.py <product>.md  --out auto/     # one product
 - `coordinate_notes` and `variable_notes` are keyed by name; a key
   `group/name` applies in that group only (OISST `time` is days in `daily`,
   months in `monthly`).
-- With several `stores`, the README's tables are the first store's, a
-  coordinate that differs (noaa-ohc's lat/lon grids) shows each store's, and
-  the loader takes a `store` argument.
+- With several `stores`, stores with the same variables share one set of
+  tables, where a coordinate that differs (noaa-ohc's lat/lon grids) shows each
+  store's; stores with different variables (noaa-gomofs 2-D and 3-D) get tables
+  each. The loader takes a `store` argument.
+- Groups are idiosyncratic: choose the tables' order, and anything unusual, case
+  by case with the user (PACE has ten near-identical groups).
 - The JSON is never edited by hand. Rerun the script instead.
 
 `scripts/render_readme.py` (Python 3.10+, PyYAML) turns a source file and that

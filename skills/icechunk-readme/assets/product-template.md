@@ -17,8 +17,8 @@ row:                         # this product's row in the collection tables
   short_name:                # e.g. ROMS forecast, best time series
   store_note:                # optional, e.g. best time series
   time_coverage:             # optional: replaces the Time coverage cell when the store has no time axis
-store_url:                   # public HTTPS URL of the Icechunk store
-stores:                      # standalone product only, in place of store_url: stores that cannot share arrays
+store_url:                   # public HTTPS URL of the Icechunk store, standard place <product>/icechunk/
+stores:                      # optional, in place of store_url: several stores, each a different dataset (icechunk/<id>/)
   - id:                      # folder name, e.g. na
     name:                    # e.g. North Atlantic
     store_url:
