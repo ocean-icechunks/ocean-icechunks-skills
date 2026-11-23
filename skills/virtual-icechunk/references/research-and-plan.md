@@ -70,13 +70,22 @@ data is rewritten. Files may be combined only when they agree on:
 dimensions · shape (apart from the combine dimension) · chunk grid · dtype ·
 codecs and endianness · the meaningful variable schema.
 
-Where they disagree, you must choose a partition. Prefer, in order:
+Where they disagree, you must choose a partition. Decide by meaning first
+(Eli Holmes, 2026-11-23): **stores are different datasets within one product;
+groups are parts of one dataset.** Prefer, in order:
 
 1. **One repository, one group, many variables.** Best consumer experience.
-2. **One repository, several groups**, when encodings are incompatible but the
-   groups clearly belong to the same product and a reader would concatenate
-   them.
-3. **Separate repositories**, when the products are independent.
+2. **Separate repositories (stores) in one product**, when the parts are
+   different datasets: regions on their own grids (CoastWatch OHC's `na`, `np`,
+   `sp`), 2-D and 3-D output (GoMOFS), a best time series and an FMRC (ECCOFS).
+3. **One repository, several groups**, only for parts of one dataset: grouped
+   that way in the files (measurements and navigation), or split because the
+   files force it, e.g. encodings that change between eras and that a reader
+   would concatenate (OHC's `daily`, `14day_v1`, `14day`).
+
+Groups can hold different grids, so a grid change alone does not decide between
+2 and 3. Where the stores and the README go follows from this choice; see
+"Layout" in `../SKILL.md`.
 
 A worked example of (1), in the direction people find surprising: NCEI accession
 0270962 ships **one indicator per NetCDF file** — twelve files on a byte-identical
@@ -191,7 +200,8 @@ carry compatibility floors. See `version-matrix.md`.
 ## 9. Deliverable
 
 The output of this mode is a short written plan covering: source access,
-destination, parser choice, discovery method, proposed groups and why, known
+destination and layout (collection or standalone, product shape, store paths),
+parser choice, discovery method, proposed stores and groups and why, known
 bad files and the proposed handling, the loaded-versus-virtual variable list, the
 predicted read performance, uncertainties, and the questions that need a human
 decision. Get that reviewed

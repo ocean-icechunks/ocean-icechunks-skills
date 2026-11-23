@@ -324,7 +324,9 @@ Answers to the open questions above, and what was built from them:
   - Per-store sections in documentation.md and metadata.md.
   - `collect_auto.py` writes `<id>.<store>.json` per store.
   Rendered from the live OHC stores, the loader read `np/14day` and `sp`. Rule: `stores` only for a
-  standalone product; in a collection each store is a product.
+  standalone product; in a collection each store is a product. (Superseded the same day: a product in a
+  collection may have several stores, and the standard place is `icechunk/` or `icechunk/<id>/`; see
+  [icechunk-layout.md](icechunk-layout.md).)
 - **"Copies" wording: neutral.** The generated text now says "the source files", "this store or its source
   files", "The code that built the store", "Newest source file". The source's prose says whether files
   were copied.
