@@ -23,8 +23,7 @@ on anything under "Open threads".
 - Hub install: `~/.agents/skills/<skill>` points at this checkout's `skills/<skill>`, and
   `~/.claude/skills/<skill>` points through it (`~/.gemini/config/skills` *is* `~/.agents/skills`).
   They follow whatever branch is checked out here. README install recipes were verified on 2026-11-13.
-  As of 2026-11-23 only `virtual-icechunk` and `archive-to-cloud` are linked; `icechunk-readme` and
-  `icechunk-layout` are not, so link them before the next task uses them.
+  `icechunk-readme` and `icechunk-layout` were linked the same way on 2026-11-23.
 
 ## Working principles
 
@@ -50,16 +49,15 @@ on anything under "Open threads".
 
 Use the skills to update the READMEs of Eli's own Icechunk repositories, in this order:
 
-1. One that needs no file moves first. Suggested: **`ocean-icechunks/pacioos`**, the only one whose stores
-   are already in the standard places (`<product>/icechunk`); it lacks only the `docs/` folders. Its
-   source files are in `evals/icechunk-readme/pacioos/source/`; only `roms_hiig` is complete. Check
-   first: PacIOOS's `ops/dataset_readme.py` rewrites a block in each product README, and `wrf_hi`'s
-   README is PacIOOS's own.
-2. If Eli is happy: do the moves in ocean-icechunks/hycom#27 and ocean-icechunks/icechunks#49 (noaa-ohc,
-   gobai-o2), then rerender and see whether she still likes the README.
-3. The rest of her own: oa-indicators, pace-oci, globcolour. Not `eeholmes/cefi`: very experimental and
+1. **Do the moves first:** ocean-icechunks/hycom#27 (`hycom/<dataset>/icechunk/`, `README.md`, `docs/`) and
+   ocean-icechunks/icechunks#49 (noaa-ohc to `icechunk/na/` etc., gobai-o2 to `icechunk/`, plus `docs/`).
+   Then write those READMEs with icechunk-readme and see whether Eli still likes them. Run
+   `scan_layout.py` before and after each move.
+2. The rest of her own: oa-indicators, pace-oci, globcolour. Not `eeholmes/cefi`: very experimental and
    to be deleted (Eli, 2026-11-23).
-4. Only then PRs to other people's repositories: ocean-icechunks/noaa_oisst (README in
+3. Only once Eli is happy with the skill: **PacIOOS**, whose READMEs another team is working on (its
+   `ops/dataset_readme.py` rewrites a block in each product README; `wrf_hi`'s README is PacIOOS's
+   own). Then PRs to other people's repositories: ocean-icechunks/noaa_oisst (README in
    `evals/icechunk-readme/noaa-oisst/`), then GOMOFS and ECCOFS (#34).
 
 ## Waiting in other repositories
